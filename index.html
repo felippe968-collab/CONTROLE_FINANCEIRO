@@ -1,0 +1,4336 @@
+<!DOCTYPE html>
+<!--
+🧾 CONTROLE FINANCEIRO — ARQUIVO COMENTADO (para leitura e estudo)
+====================================================================
+Este arquivo é o app INTEIRO em um só lugar. Ele tem 3 partes:
+
+  1) <style>  → a "roupa" do app: cores, tamanhos, posições (CSS).
+  2) o meio   → o "esqueleto": os textos, botões e janelinhas (HTML).
+  3) <script> → o "cérebro": as funções que fazem tudo funcionar (JavaScript).
+
+Como ler os comentários 💬: cada função tem um comentário em cima
+explicando, em palavras simples, o que ela faz. As seções grandes
+têm um título ===== assim ===== pra você não se perder.
+
+Os dados (ganhos, contas, cartões) ficam guardados DENTRO do seu
+aparelho, num espaço chamado localStorage — uma "gavetinha" do
+navegador que só o seu app abre.
+-->
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle Financeiro Pessoal</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>" />
+<style>
+:root {
+  --bg: #1e293b;
+  --surface: #1e293b;
+  --surface-light: #334155;
+  --primary: #6366f1;
+  --primary-hover: #818cf8;
+  --primary-light: rgba(99, 102, 241, 0.15);
+  --success: #10b981;
+  --success-light: rgba(16, 185, 129, 0.15);
+  --danger: #ef4444;
+  --danger-light: rgba(239, 68, 68, 0.15);
+  --warning: #f59e0b;
+  --warning-light: rgba(245, 158, 11, 0.15);
+
+  /* Section accent colors */
+  --income-accent: #10b981;
+  --income-accent-light: rgba(16, 185, 129, 0.08);
+  --income-border: rgba(16, 185, 129, 0.3);
+
+  --bills-accent: #f59e0b;
+  --bills-accent-light: rgba(245, 158, 11, 0.08);
+  --bills-border: rgba(245, 158, 11, 0.3);
+
+  --credit-accent: #ec4899;
+  --credit-accent-light: rgba(236, 72, 153, 0.08);
+  --credit-border: rgba(236, 72, 153, 0.3);
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -2px rgba(0,0,0,0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.3), 0 4px 6px -4px rgba(0,0,0,0.2);
+}
+
+/* ===== LIGHT MODE (day theme) — per-user preference ===== */
+/* 💬 Cores do 'modo dia' (tema claro). O escuro é o padrão. */
+body.light-mode {
+  --bg: #eef2f7;
+  --surface: #ffffff;
+  --surface-light: #dbe3ee;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #cbd5e1;
+  --primary-light: rgba(99, 102, 241, 0.12);
+  --success-light: rgba(16, 185, 129, 0.12);
+  --danger-light: rgba(239, 68, 68, 0.1);
+  --warning-light: rgba(245, 158, 11, 0.12);
+  --shadow: 0 4px 6px -1px rgba(15,23,42,0.08), 0 2px 4px -2px rgba(15,23,42,0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(15,23,42,0.1), 0 4px 6px -4px rgba(15,23,42,0.05);
+}
+
+body.light-mode .modal-overlay { background: rgba(15,23,42,0.4); }
+/* Botões transparentes (ex.: Cancelar) tinham texto branco — invisíveis no fundo claro */
+body.light-mode .btn-ghost { color: var(--text); }
+body.light-mode .btn-ghost:hover { color: var(--text); }
+
+/* ===== MODO DESKTOP (visualização ampla, como site) ===== */
+/* 💬 Estilos do antigo modo desktop: tela grande tipo computador. */
+body.desktop-mode { min-width: 1080px; }
+body.desktop-mode #appContent {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 24px;
+  align-items: start;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+body.desktop-mode .header,
+body.desktop-mode .summary-cards,
+body.desktop-mode #tab-credit,
+body.desktop-mode #tab-dashboard { grid-column: 1 / -1; }
+body.desktop-mode .tab-section + .tab-section { margin-top: 0; }
+body.desktop-mode .section { margin-top: 24px; }
+body.desktop-mode #cardsContainer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+body.desktop-mode #cardsContainer .section { margin-top: 0; }
+body.desktop-mode #tab-credit > .section { margin-top: 24px; }
+body.desktop-mode .table-wrap { overflow-x: visible; }
+body.desktop-mode .modal { max-width: 560px; }
+
+/* ===== FOTO DE PERFIL ===== */
+.profile-avatar { position: relative; overflow: hidden; }
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.profile-avatar.has-photo { background: transparent; }
+.welcome-avatar {
+  width: 92px; height: 92px;
+  border-radius: 50%;
+  margin: 0 auto 14px;
+  background: var(--primary);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2.4rem; font-weight: 700;
+  overflow: hidden;
+  border: 3px solid var(--primary-light);
+}
+.welcome-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.welcome-photo-btns { display: flex; gap: 8px; justify-content: center; margin-bottom: 14px; }
+.welcome-photo-btns .auth-submit { margin: 0; padding: 8px 14px; font-size: 0.85rem; }
+.photo-remove-btn { background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--danger); padding: 8px 14px; font-size: 0.85rem; cursor: pointer; font-weight: 600; }
+.photo-rotate-btn { background: var(--surface-light); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); padding: 8px 16px; font-size: 1.1rem; cursor: pointer; font-weight: 600; line-height: 1; }
+
+/* ===== TUTORIAL DE PRIMEIRO ACESSO ===== */
+.tutorial-overlay {
+  position: fixed; inset: 0; z-index: 1002;
+  background: rgba(2, 6, 23, 0.6);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.tutorial-overlay.active { display: flex; }
+.tutorial-card {
+  width: 100%; max-width: 360px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 26px 22px 20px;
+  text-align: center; animation: authPop .25s ease;
+}
+.tutorial-emoji { font-size: 3rem; line-height: 1; margin-bottom: 14px; }
+.tutorial-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 8px; }
+.tutorial-text { font-size: 0.9rem; color: var(--text-muted); line-height: 1.55; margin-bottom: 20px; }
+.tutorial-dots { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; }
+.tutorial-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background .2s, width .2s; }
+.tutorial-dot.active { background: var(--primary); width: 22px; border-radius: 4px; }
+.tutorial-actions { display: flex; gap: 10px; }
+.tutorial-actions .auth-submit { margin: 0; flex: 1; }
+.tutorial-skip {
+  background: transparent; border: none; color: var(--text-muted);
+  font-size: 0.85rem; cursor: pointer; padding: 10px 6px; font-weight: 600;
+}
+
+/* ===== PROMPT: COMPRA DETECTADA NA NOTIFICAÇÃO ===== */
+.notif-prompt-value { font-size: 1.6rem; font-weight: 800; color: var(--success); margin: 6px 0 2px; }
+.notif-prompt-merchant { font-size: 1rem; font-weight: 600; margin-bottom: 4px; word-break: break-word; }
+.notif-prompt-source { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 16px; }
+.photo-rotate-btn:hover { background: var(--primary-light); border-color: var(--primary); }
+.welcome-photo-btns { flex-wrap: wrap; }
+
+/* ===== PALETA DE CORES DO CARTÃO ===== */
+.color-palette { display: flex; flex-wrap: wrap; gap: 10px; padding: 4px 0; }
+.color-swatch { width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: border-color .15s, transform .1s; }
+.color-swatch:hover { transform: scale(1.1); }
+.color-swatch.selected { border-color: var(--text); }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 16px;
+  line-height: 1.5;
+}
+
+/* ===== HEADER ===== */
+/* 💬 Visual do cabeçalho de cima (título, botões, mês/ano). */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header h1 .header-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.header h1 .header-icon svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
+.header h1 .header-title {
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ===== NAV BAR ===== */
+/* 💬 A barrinha de baixo com as abas: Resumo, Ganhos, Contas, Cartão. */
+.nav-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-btn {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.nav-btn:hover { background: var(--surface-light); border-color: var(--primary); }
+.nav-btn:active { transform: scale(0.96); }
+.nav-btn.primary { background: var(--primary); border-color: var(--primary); color: white; }
+.nav-btn.primary:hover { background: var(--primary-hover); }
+
+.period-selector {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.period-selector select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.period-selector select:focus { border-color: var(--primary); }
+
+.current-month-badge {
+  background: var(--primary-light);
+  color: var(--primary-hover);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+/* ===== SUMMARY CARDS ===== */
+/* 💬 Visual dos 3 cartõezinhos (entrou / saiu / sobrou). */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+@media (max-width: 480px) {
+  .summary-cards { grid-template-columns: 1fr; gap: 10px; }
+}
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 4px; height: 100%;
+}
+
+.card.income::before { background: var(--success); }
+.card.expense::before { background: var(--danger); }
+.card.balance::before { background: var(--primary); }
+
+.card-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.card-value {
+  font-size: 1.7rem;
+  font-weight: 700;
+}
+
+.card.income .card-value { color: var(--success); }
+.card.expense .card-value { color: var(--danger); }
+.card.balance .card-value.positive { color: var(--success); }
+.card.balance .card-value.negative { color: var(--danger); }
+
+/* ===== SECTIONS ===== */
+/* 💬 Visual das 'caixas' (seções) que agrupam cada assunto na tela. */
+.section {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.section-title .icon {
+  width: 8px; height: 24px;
+  border-radius: 4px;
+  background: var(--primary);
+  flex-shrink: 0;
+}
+.section-title .title-emoji {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.section-title .title-text {
+  min-width: 0;
+  word-break: break-word;
+}
+
+/* Income section — green */
+.section-income {
+  background: var(--surface);
+  border-left: 4px solid var(--income-accent);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--income-accent);
+}
+.section-income .section-title .icon { background: var(--income-accent); }
+.section-income .section-header { border-bottom: 2px solid var(--income-border); padding-bottom: 12px; }
+
+/* Bills section — amber */
+.section-bills {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--bills-accent);
+}
+.section-bills .section-title .icon { background: var(--bills-accent); }
+.section-bills .section-header { border-bottom: 2px solid var(--bills-border); padding-bottom: 12px; }
+
+/* Credit section — pink */
+.section-credit {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--credit-accent);
+}
+.section-credit .section-title .icon { background: var(--credit-accent); }
+.section-credit .section-header { border-bottom: 2px solid var(--credit-border); padding-bottom: 12px; }
+
+.btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn:hover { background: var(--primary-hover); }
+.btn:active { transform: scale(0.97); }
+
+.btn-sm { padding: 6px 12px; font-size: 0.82rem; }
+.btn-danger { background: var(--danger); }
+.btn-danger:hover { background: #dc2626; }
+.btn-success { background: var(--success); }
+.btn-success:hover { background: #059669; }
+.btn-ghost { background: transparent; border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--surface-light); }
+
+/* ===== TABLES ===== */
+/* 💬 Visual das tabelinhas de contas e compras. */
+.table-wrap { overflow-x: auto; }
+.table-wrap th[onclick] { transition: color .15s; }
+.table-wrap th[onclick]:hover { color: var(--primary); }
+.sort-icon { font-size: .7rem; margin-left: 3px; color: var(--primary); }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th, td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+tr:hover { background: rgba(99,102,241,0.05); }
+
+td .badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.badge.paid { background: var(--success-light); color: var(--success); }
+.badge.pending { background: var(--warning-light); color: var(--warning); }
+
+.badge-parcel {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  background: var(--primary-light);
+  color: var(--primary-hover);
+  font-weight: 600;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+/* ===== FORMS / MODALS ===== */
+/* 💬 Visual dos formulários e das janelinhas flutuantes. */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  z-index: 100;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.modal-overlay.active { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 24px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border);
+  margin: auto 0;
+}
+
+.modal h2 {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+.form-group { margin-bottom: 16px; }
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus { border-color: var(--primary); }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-actions .btn { flex: 1; justify-content: center; }
+
+/* ===== TOGGLE ===== */
+.toggle-type {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.toggle-type button {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.toggle-type button.active {
+  background: var(--primary-light);
+  color: var(--primary-hover);
+  border-color: var(--primary);
+}
+
+/* ===== CHECKBOX ===== */
+.status-checkbox {
+  width: 20px; height: 20px;
+  cursor: pointer;
+  accent-color: var(--success);
+}
+
+/* ===== CREDIT CARD PERSONS ===== */
+/* 💬 Visual do resumo de gastos por pessoa no cartão. */
+.persons-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.person-card {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.person-card .pname {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.person-card .pvalue {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.person-card.titular { border-color: var(--success); }
+.person-card.titular .pvalue { color: var(--success); }
+
+.total-fatura {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+}
+
+.total-fatura .label {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.total-fatura .value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--danger);
+}
+
+/* ===== PEOPLE MANAGER ===== */
+/* 💬 Visual do gerenciador de pessoas da casa. */
+.people-manager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.person-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.88rem;
+  transition: all 0.2s;
+}
+
+.person-tag.titular {
+  border-color: var(--success);
+  background: var(--success-light);
+}
+
+.person-tag .remove-person {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.person-tag .edit-person {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+.person-tag .edit-person:hover { opacity: 1; }
+.person-tag .person-name-text { user-select: none; }
+
+.add-person-inline {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.add-person-inline input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.88rem;
+  outline: none;
+  width: 140px;
+  transition: border-color 0.2s;
+}
+
+.add-person-inline input:focus { border-color: var(--primary); }
+
+.add-person-inline button {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px; height: 30px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.add-person-inline button:hover { background: var(--primary-hover); }
+
+/* ===== INCOME SECTION ===== */
+.income-row {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.income-row .form-group { flex: 1; min-width: 200px; margin-bottom: 0; }
+
+/* ===== MOBILE CARD LAYOUT (tables → cards) ===== */
+/* 💬 No celular, as tabelas viram 'cartõezinhos' empilhados pra ficar fácil de ler. */
+@media (max-width: 768px) {
+  /* Convert tables to stacked cards */
+  .table-wrap table,
+  .table-wrap thead,
+  .table-wrap tbody,
+  .table-wrap tr,
+  .table-wrap td,
+  .table-wrap th {
+    display: block;
+    width: 100% !important;
+  }
+  .table-wrap thead { display: none; }
+  .table-wrap tbody tr {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  }
+  .table-wrap tbody tr:hover { background: var(--bg); }
+  .table-wrap td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: none;
+    padding: 5px 0;
+    white-space: normal;
+    font-size: 0.88rem;
+  }
+  .table-wrap td > .cell-value {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    text-align: right;
+    gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .table-wrap td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+  }
+  .table-wrap td[data-label="Status"],
+  .table-wrap td[data-label="Ações"] {
+    display: inline-flex;
+    padding-top: 8px;
+    gap: 8px;
+  }
+  .table-wrap td[data-label="Status"]::before,
+  .table-wrap td[data-label="Ações"]::before {
+    display: none;
+  }
+  .table-wrap td[data-label="Status"] .status-checkbox {
+    width: 24px; height: 24px;
+  }
+  /* Special: row with checkbox + actions inline at bottom */
+  .mobile-actions-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 8px;
+    margin-top: 4px;
+    border-top: 1px solid var(--border);
+  }
+  .mobile-actions-row .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+}
+
+@media (max-width: 640px) {
+  body { padding: 8px; padding-bottom: 24px; }
+  .header { flex-direction: column; align-items: stretch; gap: 8px; }
+  .header h1 { justify-content: center; font-size: 1.35rem; }
+  .nav-bar { justify-content: center; flex-wrap: wrap; gap: 6px; }
+  .nav-btn { padding: 7px 10px; font-size: 0.8rem; }
+  .period-selector { justify-content: center; }
+  .period-selector select { padding: 7px 10px; font-size: 0.88rem; }
+  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  .card-value { font-size: 1.3rem; }
+  .modal { padding: 16px; margin: 0; border-radius: var(--radius); }
+  .modal-overlay { padding: 10px; }
+  .summary-cards { gap: 10px; margin-bottom: 20px; }
+  .card { padding: 14px; }
+  .card-label { font-size: 0.72rem; }
+  .section { padding: 14px; margin-bottom: 16px; }
+  .section-title { font-size: 1.05rem; }
+  .section-header { gap: 8px; }
+  .btn { padding: 7px 14px; font-size: 0.85rem; }
+  .tabs { gap: 2px; margin-bottom: 16px; }
+  .tab { padding: 8px 12px; font-size: 0.85rem; }
+  .install-btn, .data-btn { padding: 7px 10px; font-size: 0.82rem; }
+  .total-fatura { padding: 12px 14px; }
+  .total-fatura .value { font-size: 1.2rem; }
+  .person-card { padding: 10px; }
+  .person-card .pvalue { font-size: 1.05rem; }
+  .persons-summary { gap: 8px; }
+  .chart-container { height: 220px; }
+  .toggle-type button { padding: 8px; font-size: 0.82rem; }
+  .login-btn span, .profile-name { display: none; }
+}
+
+@media (max-width: 400px) {
+  .card-value { font-size: 1.15rem; }
+  .header h1 { font-size: 1.2rem; }
+  .tab { padding: 7px 8px; font-size: 0.78rem; }
+}
+
+/* ===== TABS ===== */
+/* 💬 Visual da barrinha de abas. */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--border);
+  overflow-x: auto;
+}
+
+.tab {
+  padding: 10px 18px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab.active {
+  color: var(--primary-hover);
+  border-bottom-color: var(--primary);
+}
+
+.tab:hover { color: var(--text); }
+
+.tab-section { display: block; }
+.tab-section + .tab-section { margin-top: 24px; }
+
+/* ===== ACTION ICONS ===== */
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.icon-btn:hover { background: var(--surface-light); color: var(--text); }
+.icon-btn.danger:hover { color: var(--danger); }
+
+.value-input { color: var(--success); font-weight: 600; }
+
+/* ================= POLIMENTO MOBILE v1.7 (só visual) ================= */
+@keyframes modalSlideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  /* --- alvos de toque confortáveis (padrão 44px) --- */
+  .btn { min-height: 44px; padding: 10px 16px; font-size: 0.9rem; }
+  .nav-btn { min-height: 42px; display: inline-flex; align-items: center; justify-content: center; padding: 9px 13px; font-size: 0.82rem; }
+  .icon-btn { min-width: 38px; min-height: 38px; }
+  .toggle-type button { min-height: 42px; }
+  .install-btn, .data-btn { min-height: 42px; }
+  .modal-actions .btn { min-height: 46px; font-size: 0.95rem; }
+
+  /* --- cards de resumo em linha única: rótulo à esquerda, valor à direita --- */
+  .summary-cards { gap: 8px; margin-bottom: 14px; }
+  .card {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 12px 14px;
+  }
+  .card::before { width: 4px; }
+  .card-label { margin-bottom: 0; font-size: 0.72rem; letter-spacing: 0.4px; flex: 1 1 auto; padding-right: 4px; }
+  .card-value { font-size: 1.15rem; flex-shrink: 0; }
+
+  /* --- cabeçalho das seções: botão de ação ocupa a linha inteira --- */
+  .section-header { gap: 8px; }
+  .section-header .btn { width: 100%; }
+
+  /* --- formulários: campos maiores e foco visível --- */
+  .form-group label { font-size: 0.78rem; font-weight: 600; }
+  .modal input, .modal select, .modal textarea {
+    font-size: 16px; padding: 11px 12px;
+  }
+  .modal input:focus, .modal select:focus, .modal textarea:focus {
+    outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+  }
+  .form-group input, .form-group select {
+    font-size: 16px;
+  }
+
+  /* --- modais estilo "bottom sheet": sobem de baixo, cantos arredondados no topo --- */
+  .modal-overlay { padding: 0; align-items: flex-end; justify-content: stretch; overscroll-behavior: contain; }
+  .modal {
+    margin: 0; max-width: 100%;
+    border-radius: 18px 18px 0 0;
+    padding: 18px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+    max-height: 92vh;
+    overflow-y: auto;
+    animation: modalSlideUp 0.22s ease;
+  }
+  .modal h2 { font-size: 1.08rem; }
+
+  /* --- listas (tabelas viram cards): mais respiro e hierarquia --- */
+  .table-wrap tbody tr { padding: 12px 14px; margin-bottom: 8px; }
+  .table-wrap td { padding: 6px 0; font-size: 0.9rem; }
+  .table-wrap td::before { font-size: 0.68rem; }
+
+  /* --- espaço extra embaixo perto da barra de gestos (celulares com notch) --- */
+  body { padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+}
+
+
+
+/* Ações sob o título: recolhidas até o toque; listas permanecem visíveis. */
+.section-disclosure { margin-bottom: 16px; }
+.section-disclosure > summary { list-style: none; cursor: pointer; user-select: none; min-height: 44px; margin-bottom: 0; }
+.section-disclosure > summary::-webkit-details-marker { display: none; }
+.section-disclosure > summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.section-disclosure > summary .section-title { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.disclosure-chevron { color: var(--text-muted); font-size: 1.35rem; line-height: 1; transition: transform .2s; flex-shrink: 0; }
+.section-disclosure[open] .disclosure-chevron { transform: rotate(180deg); }
+.people-manager-summary {
+  font-size: 0.85rem; color: var(--text-muted); font-weight: 500;
+  cursor: pointer; user-select: none; list-style: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  min-height: 40px;
+}
+.people-manager-summary::-webkit-details-marker { display: none; }
+.people-disclosure .people-manager { padding-top: 10px; }
+.section-total {
+  font-weight: 700; font-size: 0.95rem; white-space: nowrap; flex-shrink: 0;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 999px;
+  padding: 5px 12px; color: var(--text);
+}
+.section-bills .section-total { color: var(--bills-border); border-color: var(--bills-border); }
+.credit-total { color: var(--credit-accent, var(--primary-hover)); border-color: var(--credit-border, var(--border)); }
+.section-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 12px 0 2px; }
+#tab-income:not(.actions-open) .icon-btn, #tab-bills:not(.actions-open) .icon-btn,
+#tab-credit:not(.actions-open) .icon-btn, #cardsContainer .section-credit:not(.actions-open) .icon-btn { display: none !important; }
+@media (max-width: 640px) {
+  .section-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+  .section-actions .btn, .section-actions .edit-toggle-btn { width: 100%; justify-content: center; min-height: 44px; }
+}
+
+/* ================= MODO EDIÇÃO (esconder ícones de ação) ================= */
+/* 💬 Modo ✏️: esconde lápis/lixeira até você tocar em Editar. */
+.tab-section:not(.edit-mode) .icon-btn { display: none !important; }
+.edit-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.edit-toggle-btn:hover { background: var(--surface-light); color: var(--text); border-color: var(--primary); }
+.edit-toggle-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+@media (max-width: 640px) {
+  .edit-toggle-btn { min-height: 42px; padding: 8px 12px; }
+}
+
+</style>
+</div><!-- /appContent -->
+
+<!-- Welcome Modal (first launch / edit profile) -->
+<div class="auth-modal-overlay" id="welcomeOverlay">
+  <div class="auth-modal">
+    <h2 id="welcomeTitle">Bem-vindo! 👋</h2>
+    <p id="welcomeSubtitle">Seu controle financeiro, salvo direto no seu aparelho.</p>
+    <div class="auth-error" id="welcomeError"></div>
+    <div class="welcome-avatar" id="welcomeAvatar">👤</div>
+    <div class="welcome-photo-btns">
+      <button class="auth-submit" onclick="pickProfilePhoto('camera')">📷 Tirar foto</button>
+      <button class="auth-submit" onclick="pickProfilePhoto('gallery')">🖼️ Galeria</button>
+    </div>
+    <div class="welcome-photo-btns" id="photoRotateBtns" style="display:none">
+      <button class="photo-rotate-btn" onclick="rotateProfilePhoto(-90)" title="Girar à esquerda">⟲</button>
+      <button class="photo-rotate-btn" onclick="rotateProfilePhoto(90)" title="Girar à direita">⟳</button>
+      <button class="photo-remove-btn" id="removePhotoBtn" onclick="removeProfilePhoto()">✖ Remover foto</button>
+    </div>
+    <input type="file" id="photoFileInput" accept="image/*" style="display:none" onchange="onPhotoFilePicked(event)">
+    <input type="file" id="photoCameraInput" accept="image/*" capture="environment" style="display:none" onchange="onPhotoFilePicked(event)">
+    <input type="text" id="welcomeName" placeholder="Como você se chama?" autocomplete="name" maxlength="40" style="text-align:center" oninput="updateWelcomeAvatarPreview()">
+    <button class="auth-submit" id="welcomeSubmitBtn" onclick="submitWelcome()">Começar</button>
+    <p style="margin:6px 0 0;font-size:0.78rem;color:var(--text-muted);text-align:center">🔒 Seus dados ficam salvos apenas neste dispositivo.</p>
+  </div>
+</div>
+
+<!-- ===== TUTORIAL DE PRIMEIRO ACESSO ===== -->
+<!-- 💬 O passo a passo que aparece na PRIMEIRA vez que o app abre. -->
+<div class="tutorial-overlay" id="tutorialOverlay">
+  <div class="tutorial-card">
+    <div class="tutorial-emoji" id="tutorialEmoji">👋</div>
+    <div class="tutorial-title" id="tutorialTitle"></div>
+    <div class="tutorial-text" id="tutorialText"></div>
+    <div class="tutorial-dots" id="tutorialDots"></div>
+    <div class="tutorial-actions">
+      <button class="tutorial-skip" onclick="finishTutorial(true)">Pular</button>
+      <button class="auth-submit" id="tutorialNextBtn" onclick="tutorialNext()">Próximo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: COMPRA DETECTADA EM NOTIFICAÇÃO ===== -->
+<!-- 💬 A janelinha que avisa 'Detectei uma compra!' lendo notificações de banco (só Android). -->
+<div class="modal-overlay" id="notifPromptModal">
+  <div class="modal" style="max-width:400px">
+    <h2>🔔 Compra detectada!</h2>
+    <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:10px">Detectamos uma compra numa notificação do seu celular:</p>
+    <div style="text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
+      <div class="form-group" style="margin-bottom:8px">
+        <label style="text-align:center;display:block">Valor</label>
+        <input type="number" id="notifPromptValue" class="notif-prompt-value-input" step="0.01" min="0" style="text-align:center;font-size:1.3rem;font-weight:800;color:var(--success)">
+      </div>
+      <div class="form-group" style="margin-bottom:6px">
+        <label style="text-align:center;display:block">Nome da compra</label>
+        <input type="text" id="notifPromptMerchant" class="notif-prompt-merchant-input" maxlength="60" style="text-align:center;font-weight:600">
+      </div>
+      <div class="notif-prompt-source" id="notifPromptSource"></div>
+    </div>
+    <div class="form-group">
+      <label>Adicionar em qual cartão?</label>
+      <select id="notifPromptCard"></select>
+    </div>
+    <div class="form-group">
+      <label>Quem Comprou</label>
+      <select id="notifPromptPerson"></select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Parcelas</label>
+        <input type="number" id="notifPromptInstallments" placeholder="Ex: 1 (à vista)" min="1" value="1">
+      </div>
+      <div class="form-group">
+        <label>Vencimento</label>
+        <input type="date" id="notifPromptDueDate">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="declinePendingPurchase()">✖ Não</button>
+      <button class="btn btn-success" onclick="acceptPendingPurchase()">✅ Sim, adicionar</button>
+    </div>
+  </div>
+</div>
+
+<script src="chart.umd.min.js"></script>
+<script src="jspdf.umd.min.js"></script>
+<script src="jspdf.plugin.autotable.min.js"></script>
+<style>
+/* ===== DASHBOARD ===== */
+/* 💬 Visual da tela Resumo, com os gráficos. */
+.dashboard-year-label {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--primary-hover);
+}
+.dash-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.chart-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+.chart-box.full { grid-column: 1 / -1; }
+.chart-box h3 {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 280px;
+}
+.year-breakdown {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.year-breakdown th, .year-breakdown td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.year-breakdown th {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+.year-breakdown .bal-pos { color: var(--success); font-weight: 600; }
+.year-breakdown .bal-neg { color: var(--danger); font-weight: 600; }
+.year-breakdown .current-row { background: var(--primary-light); }
+@media (max-width: 768px) {
+  .chart-grid { grid-template-columns: 1fr; gap: 14px; }
+  .dash-cards { grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 640px) {
+    .dash-cards { grid-template-columns: 1fr; gap: 8px; }
+    .dash-cards .card { display: block; }
+    .dash-cards .card-label { margin-bottom: 6px; }
+    .dash-cards .card-value { font-size: 1.3rem !important; flex-shrink: initial !important; white-space: normal !important; }
+  }
+}
+</style>
+
+<style>
+/* ===== PWA INSTALL BUTTON ===== */
+.install-btn {
+  background: linear-gradient(135deg, var(--success), #059669);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+.install-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); }
+.install-btn:active { transform: scale(0.97); }
+.install-btn.visible { display: inline-flex; }
+
+.data-btn {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.data-btn:hover { background: var(--surface-light); border-color: var(--primary); }
+
+.install-instructions {
+  text-align: center;
+  padding: 20px;
+}
+.install-instructions .step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+}
+.install-instructions .step-num {
+  background: var(--primary);
+  color: white;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.install-instructions .step-text {
+  font-size: 0.9rem;
+  color: var(--text);
+}
+.platform-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.platform-badge.ios { background: var(--primary-light); color: var(--primary-hover); }
+.platform-badge.android { background: var(--success-light); color: var(--success); }
+.platform-badge.desktop { background: var(--warning-light); color: var(--warning); }
+</style>
+
+<style>
+/* ===== PROFILE CHIP ===== */
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--primary-light);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px 4px 4px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: opacity 0.2s;
+}
+.profile-chip:hover { opacity: 0.85; }
+.profile-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+/* ===== GOOGLE LOGIN ===== */
+.login-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.login-btn:hover { opacity: 0.9; }
+/* Auth modal */
+.auth-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+  display: none; align-items: center; justify-content: center;
+  z-index: 10000; padding: 16px;
+}
+.auth-modal-overlay.active { display: flex; }
+.auth-modal {
+  background: var(--surface); border-radius: var(--radius-lg);
+  padding: 32px 28px; max-width: 380px; width: 100%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  animation: authSlideIn 0.3s ease;
+}
+@keyframes authSlideIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+/* Blur effect on app content when not logged in */
+.app-blurred { filter: blur(8px); pointer-events: none; user-select: none; }
+.auth-modal h2 { margin: 0 0 6px; font-size: 1.3rem; color: var(--text); }
+.auth-modal p { margin: 0 0 20px; font-size: 0.85rem; color: var(--text-muted); }
+.auth-modal input {
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 0.95rem; margin-bottom: 12px;
+  background: var(--bg); color: var(--text); box-sizing: border-box;
+}
+.auth-modal input:focus { outline: none; border-color: var(--primary); }
+.auth-modal input[type="file"] { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
+.auth-modal button {
+  width: 100%; padding: 12px; border: none; border-radius: var(--radius-sm);
+  font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.auth-modal .auth-submit { background: var(--primary); color: white; margin-bottom: 12px; }
+.auth-modal .auth-submit:hover { opacity: 0.9; }
+.auth-modal .auth-toggle { background: transparent; color: var(--primary); font-size: 0.85rem; }
+.auth-modal .auth-toggle:hover { text-decoration: underline; }
+.auth-error { color: var(--danger); font-size: 0.82rem; margin-bottom: 12px; display: none; }
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.profile-pic {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--primary);
+}
+.profile-name {
+  font-size: 0.85rem;
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.logout-btn {
+  background: var(--surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.logout-btn:hover { background: var(--danger); color: white; border-color: var(--danger); }
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+.sync-badge.online { background: var(--success-light); color: var(--success); }
+.sync-badge.offline { background: var(--warning-light); color: var(--warning); }
+.migrate-banner {
+  display: none;
+  background: var(--primary-light);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+.migrate-banner.visible { display: flex; }
+@media (max-width: 640px) {
+  .profile-name { display: none; }
+  .login-btn span { display: none; }
+  .login-btn svg { width: 20px; height: 20px; }
+}
+</style>
+</head>
+<body>
+<div id="appContent">
+
+<!-- ===== HEADER ===== -->
+<!-- 💬 O 'cabeçalho': a parte de cima com o título, mês/ano e os botõezinhos. -->
+<div class="header">
+  <h1>
+    <span class="header-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+        <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
+      </svg>
+    </span>
+    <span class="header-title">Controle Financeiro</span>
+  </h1>
+  <div class="nav-bar">
+    <button class="nav-btn" onclick="changeMonth(-1)" title="Mês anterior">◀ Voltar</button>
+    <div class="period-selector">
+      <select id="monthSelect" onchange="changePeriod()"></select>
+      <select id="yearSelect" onchange="changePeriod()"></select>
+      <span class="current-month-badge" id="currentBadge" style="display:none">Mês Atual</span>
+    </div>
+    <button class="nav-btn" onclick="changeMonth(1)" title="Próximo mês">Avançar ▶</button>
+    <button class="nav-btn primary" onclick="goToCurrentMonth()" title="Ir para o mês da fatura atual (mês seguinte ao de hoje)">📅 Mês da Fatura</button>
+    <button class="install-btn" id="installBtn" onclick="installApp()">
+      📲 Instalar no Dispositivo
+    </button>
+    <button class="data-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Alternar modo noturno/diurno">☀️ Dia</button>
+    <button class="data-btn" onclick="openDataModal()" title="Gerenciar dados">📦 Dados</button>
+    <div class="profile-section" id="authSection"></div>
+  </div>
+</div>
+
+
+<!-- ===== SUMMARY CARDS ===== -->
+<!-- 💬 Os 3 cartõezinhos: quanto entrou, quanto saiu e quanto sobrou. -->
+<div class="summary-cards">
+  <div class="card income">
+    <div class="card-label">Ganhos Mensais</div>
+    <div class="card-value" id="incomeCard">R$ 0,00</div>
+  </div>
+  <div class="card expense">
+    <div class="card-label">Total de Despesas</div>
+    <div class="card-value" id="expenseCard">R$ 0,00</div>
+  </div>
+  <div class="card balance">
+    <div class="card-label">Restante na Conta</div>
+    <div class="card-value" id="balanceCard">R$ 0,00</div>
+  </div>
+</div>
+
+<!-- ===== TAB: INCOME ===== -->
+<!-- 💬 A tela de GANHOS: tudo que entra no mês (salário, extras). -->
+<div class="tab-section" id="tab-income">
+  <div class="section section-income">
+    <details class="section-disclosure" ontoggle="sectionActionsToggled(this)">
+      <summary class="section-header"><div class="section-title"><span class="icon"></span> Ganhos e Receitas do Mês</div><span class="disclosure-chevron" aria-hidden="true">⌄</span></summary>
+      <div class="section-actions">
+        <button class="btn" onclick="openIncomeModal()">+ Novo Ganho</button>
+        <button class="edit-toggle-btn" id="editToggle_income" onclick="toggleEditMode('income')" title="Mostrar/ocultar ícones de editar e excluir">✏️ <span id="editToggleLabel_income">Editar</span></button>
+      </div>
+    </details>
+    <div class="table-wrap">
+      <table id="incomeTable">
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Valor</th>
+            <th>Data</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="incomeBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="incomeEmpty">Nenhum ganho cadastrado neste mês.</div>
+  </div>
+</div>
+
+<!-- ===== TAB: BILLS ===== -->
+<!-- 💬 A tela de CONTAS: as contas fixas (todo mês) e parceladas. -->
+<div class="tab-section" id="tab-bills">
+  <div class="section section-bills">
+    <details class="section-disclosure" data-acc-key="bills" ontoggle="sectionActionsToggled(this)">
+      <summary class="section-header"><div class="section-title"><span class="icon"></span> Contas Fixas e Parceladas</div><span class="section-total" id="billsTotalSummary">R$ 0,00</span><span class="disclosure-chevron" aria-hidden="true">⌄</span></summary>
+      <div class="section-actions">
+        <button class="btn" onclick="openBillModal()">+ Nova Conta</button>
+        <button class="edit-toggle-btn" id="editToggle_bills" onclick="toggleEditMode('bills')" title="Mostrar/ocultar ícones de editar e excluir">✏️ <span id="editToggleLabel_bills">Editar</span></button>
+      </div>
+    <div class="table-wrap">
+      <table id="billsTable">
+        <thead>
+          <tr>
+            <th onclick="sortBills('desc')" style="cursor:pointer;user-select:none">Descrição<span id="sortIcon-desc" class="sort-icon"></span></th>
+            <th onclick="sortBills('valor')" style="cursor:pointer;user-select:none">Valor<span id="sortIcon-valor" class="sort-icon"></span></th>
+            <th onclick="sortBills('parcela')" style="cursor:pointer;user-select:none">Parcela<span id="sortIcon-parcela" class="sort-icon"></span></th>
+            <th onclick="sortBills('vencimento')" style="cursor:pointer;user-select:none">Vencimento<span id="sortIcon-vencimento" class="sort-icon"></span></th>
+            <th onclick="sortBills('status')" style="cursor:pointer;user-select:none">Status<span id="sortIcon-status" class="sort-icon"></span></th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="billsBody"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="billsEmpty">Nenhuma conta cadastrada neste mês. Clique em "Nova Conta" para começar.</div>
+    </details>
+  </div>
+</div>
+
+<!-- ===== TAB: CREDIT CARD ===== -->
+<!-- 💬 A tela do CARTÃO DE CRÉDITO: faturas e compras de cada cartão. -->
+<div class="tab-section" id="tab-credit">
+  <div class="section section-credit">
+    <details class="section-disclosure" ontoggle="sectionActionsToggled(this)">
+      <summary class="section-header"><div class="section-title"><span class="icon"></span><span class="title-emoji">💳</span><span class="title-text">Cartões de Crédito</span></div><span class="disclosure-chevron" aria-hidden="true">⌄</span></summary>
+      <div class="section-actions">
+        <button class="btn btn-success" onclick="openCardModal()">➕ Criar novo cartão de crédito</button>
+        <button class="btn btn-ghost" onclick="openCreditPdfModal()">📄 Exportar PDF</button>
+        <button class="edit-toggle-btn" id="editToggle_credit" onclick="toggleEditMode('credit')" title="Mostrar/ocultar ícones de editar e excluir">✏️ <span id="editToggleLabel_credit">Editar</span></button>
+      </div>
+    </details>
+
+    <!-- People Manager (global, vale para todos os cartões) — recolhido por padrão -->
+    <details class="section-disclosure people-disclosure" data-acc-key="people" data-acc-default="closed" ontoggle="sectionActionsToggled(this)" style="margin-bottom:16px">
+      <summary class="people-manager-summary">👥 Gerenciar pessoas (adicionar / editar / remover)<span class="disclosure-chevron" aria-hidden="true">⌄</span></summary>
+      <div class="people-manager" id="peopleManager"></div>
+    </details>
+
+    <div class="persons-summary" id="personsSummary"></div>
+  </div>
+
+  <div id="cardsContainer"></div>
+
+
+</div>
+
+<!-- ===== TAB: DASHBOARD ===== -->
+<!-- 💬 A tela RESUMO: os números do mês e os gráficos. -->
+<div class="tab-section" id="tab-dashboard">
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title"><span class="icon"></span> Panorama Anual</div>
+    </div>
+    <div class="dashboard-year-label" id="dashYearLabel"></div>
+
+    <div class="dash-cards" id="dashCards"></div>
+
+    <div class="chart-grid">
+      <div class="chart-box full">
+        <h3>💰 Ganhos vs Despesas por Mês</h3>
+        <div class="chart-container"><canvas id="chartGanhosDespesas"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>📈 Saldo Mensal</h3>
+        <div class="chart-container"><canvas id="chartSaldo"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>🥧 Despesas por Categoria</h3>
+        <div class="chart-container"><canvas id="chartCategoria"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>👥 Cartão por Pessoa</h3>
+        <div class="chart-container"><canvas id="chartPessoa"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h3>📊 Saldo Acumulado</h3>
+        <div class="chart-container"><canvas id="chartAcumulado"></canvas></div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px">
+      <h3 style="font-size:.95rem;color:var(--text-muted);margin-bottom:12px;font-weight:600">📋 Resumo Mês a Mês</h3>
+      <div class="table-wrap">
+        <table class="year-breakdown">
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th>Ganhos</th>
+              <th>Despesas</th>
+              <th>Saldo</th>
+              <th>Cartão (Total)</th>
+            </tr>
+          </thead>
+          <tbody id="dashBreakdown"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: BILL ===== -->
+<!-- 💬 Formulário de conta (criar ou editar). -->
+<div class="modal-overlay" id="billModal">
+  <div class="modal">
+    <h2 id="billModalTitle">Nova Conta</h2>
+    <div class="toggle-type" id="billTypeToggle">
+      <button class="active" onclick="setBillType('fixed')">📌 Conta Fixa (sem prazo)</button>
+      <button onclick="setBillType('installment')">🔢 Parcelada / Com Vigência</button>
+    </div>
+    <div class="form-group">
+      <label>Descrição</label>
+      <input type="text" id="billDesc" placeholder="Ex: Condomínio, Luz, Carro...">
+    </div>
+    <div class="form-group">
+      <label>Categoria</label>
+      <select id="billCategory">
+        <option>Moradia</option>
+        <option>Alimentação</option>
+        <option>Transporte</option>
+        <option>Saúde</option>
+        <option>Educação</option>
+        <option>Lazer</option>
+        <option>Impostos</option>
+        <option>Outros</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Valor (R$)</label>
+        <input type="number" id="billValue" placeholder="0,00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Dia do Vencimento</label>
+        <input type="number" id="billDueDay" placeholder="Ex: 10" min="1" max="31" value="10">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Início: Mês</label>
+        <select id="billStartMonth"></select>
+      </div>
+      <div class="form-group">
+        <label>Início: Ano</label>
+        <input type="number" id="billStartYear" placeholder="Ex: 2026" min="2020" max="2099">
+      </div>
+    </div>
+    <div id="installmentFields" style="display:none">
+      <div class="form-group">
+        <label>Quantidade de Parcelas</label>
+        <input type="number" id="billInstallments" placeholder="Ex: 24" min="1" value="1">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('billModal')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveBill()">Salvar Conta</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: MONTH OVERRIDE ===== -->
+<!-- 💬 Janelinha de valor especial: quando uma conta muda só num mês. -->
+<div class="modal-overlay" id="monthOverrideModal">
+  <div class="modal">
+    <h2>🗓️ Editar só deste mês</h2>
+    <p style="color:var(--text-muted);font-size:.88rem;margin-bottom:16px">
+      Altere o valor e/ou descrição apenas para <strong id="overrideMonthLabel" style="color:var(--text)"></strong>.
+      Os outros meses continuam com o valor original.
+    </p>
+    <div class="form-group">
+      <label>Descrição (opcional — deixe vazio para manter a original)</label>
+      <input type="text" id="overrideDesc" placeholder="Ex: Condomínio (taxa extra)">
+    </div>
+    <div class="form-group">
+      <label>Valor para este mês (R$)</label>
+      <input type="number" id="overrideValue" placeholder="0,00" step="0.01" min="0">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('monthOverrideModal')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveMonthOverride()">Salvar deste mês</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: CREDIT ===== -->
+<!-- 💬 Formulário de compra do cartão (criar ou editar). -->
+<div class="modal-overlay" id="creditModal">
+  <div class="modal">
+    <h2 id="creditModalTitle">Nova Compra do Cartão</h2>
+    <div id="creditCardBadge" style="display:none;background:var(--primary-light);color:var(--text);border-radius:var(--radius-sm);padding:6px 12px;font-size:.82rem;font-weight:600;margin-bottom:14px;width:fit-content"></div>
+    <div class="form-group">
+      <label>Compra</label>
+      <input type="text" id="creditDesc" placeholder="Ex: Tênis, Mercado, Eletrônico..." oninput="autoFillDate()">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Valor Total (R$)</label>
+        <input type="number" id="creditValue" placeholder="0,00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Quem Comprou</label>
+        <select id="creditPerson"></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Quantidade de Parcelas</label>
+        <input type="number" id="creditInstallments" placeholder="Ex: 1 (à vista)" min="1" value="1">
+      </div>
+      <div class="form-group">
+        <label>Data de Inclusão</label>
+        <input type="date" id="creditDate">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('creditModal')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveCredit()">Salvar Compra</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: INCOME ===== -->
+<!-- 💬 Formulário de ganho (criar ou editar). -->
+<div class="modal-overlay" id="incomeModal">
+  <div class="modal">
+    <h2 id="incomeModalTitle">Novo Ganho / Receita</h2>
+    <div class="form-group">
+      <label>Descrição</label>
+      <input type="text" id="incomeDesc" placeholder="Ex: Salário, Freelance, Rendimento...">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Valor (R$)</label>
+        <input type="number" id="incomeValue" placeholder="0,00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="incomeDate">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Recorrente? (repete todo mês)</label>
+      <select id="incomeRecurring">
+        <option value="no">Não — apenas este vez</option>
+        <option value="yes">Sim — repetir todos os meses</option>
+        <option value="override">Apenas este mês (exceção)</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('incomeModal')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveIncome()">Salvar Ganho</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Income Month Override -->
+
+<!-- ===== MODAL: DATA MANAGEMENT ===== -->
+<!-- 💬 A janelinha 📦 Dados: backup, restaurar e apagar tudo. -->
+<div class="modal-overlay" id="dataModal">
+  <div class="modal" style="max-width:480px">
+    <h2>📦 Gerenciar Dados</h2>
+    <div style="margin-bottom:16px">
+      <button class="settings-action-btn" onclick="exportLocalJSON()" style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.9rem;cursor:pointer;margin-bottom:8px">
+        <span style="font-size:1.2rem">⬇️</span> Exportar Dados (arquivo .json)
+      </button>
+      <button class="settings-action-btn" onclick="triggerImport()" style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:.9rem;cursor:pointer;margin-bottom:8px">
+        <span style="font-size:1.2rem">⬆️</span> Importar Dados (arquivo .json)
+      </button>
+      <input type="file" id="importJSONFile" accept=".json" style="display:none" onchange="importLocalJSON(event)">
+      <button class="settings-action-btn" onclick="clearAllData()" style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 16px;background:var(--bg);border:1px solid var(--danger);border-radius:var(--radius-sm);color:var(--danger);font-size:.9rem;cursor:pointer">
+        <span style="font-size:1.2rem">🗑️</span> Apagar Todos os Dados
+      </button>
+    </div>
+    <div style="margin-bottom:16px;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm)">
+      <div style="display:flex;align-items:center;gap:8px;font-size:.9rem;font-weight:600;margin-bottom:6px">
+        <span style="font-size:1.2rem">🔔</span> Capturar compras por notificação
+      </div>
+      <p id="notifStatus" style="font-size:.78rem;color:var(--text-muted);line-height:1.5;margin:0 0 10px">
+        Deixe o app ler as notificações de compra dos apps de banco. Ao abrir o app, ele pergunta se você quer lançar a compra no cartão.
+      </p>
+      <button class="btn" style="width:100%;padding:10px" onclick="openNotifAccessSettings()" id="notifEnableBtn">Ativar leitura de notificações</button>
+    </div>
+    <div style="font-size:.82rem;color:var(--text-muted);line-height:1.6;padding:12px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border)">
+      💡 Seus dados são salvos automaticamente neste dispositivo. Use "Exportar" para criar um backup em arquivo, e "Importar" para restaurar.
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('dataModal')" style="flex:1">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: INSTALL INSTRUCTIONS ===== -->
+<div class="modal-overlay" id="installModal">
+  <div class="modal" style="max-width:480px">
+    <h2>📲 Instalar no Dispositivo</h2>
+    <div id="installInstructions"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('installModal')" style="flex:1">Fechar</button>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ===== GLOBAL STATE (as variáveis que o app todo usa) =====
+// 💬 MONTHS: a lista dos nomes dos 12 meses do ano (Janeiro a Dezembro).
+// 💬 STORAGE_KEY: o 'nome da gaveta' onde o app guarda seus dados no aparelho.
+// 💬 currentMonth/currentYear: o mês e ano que você está OLHANDANDO na tela
+//    (pode ser um mês antigo ou futuro — o app viaja no tempo com você!).
+// 💬 editingBillId: quando você edita uma conta, guarda aqui qual é ela.
+// 💬 db: a "caixa" com TUDO: contas (bills), compras do cartão (credits),
+//    ganhos (incomes) e a lista de pessoas da casa (people).
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+// 💬 getTitular() → Descobre quem é a 'pessoa principal' da casa (a primeira da lista de pessoas).
+function getTitular() { return db.people[0] || 'Pessoa 1'; }
+const STORAGE_KEY = 'finance_control_data_v2';
+
+let _now = new Date();
+let currentMonth = _now.getMonth() + 1 > 11 ? 0 : _now.getMonth() + 1;
+let currentYear = _now.getMonth() + 1 > 11 ? _now.getFullYear() + 1 : _now.getFullYear();
+let realMonth = new Date().getMonth();
+let realYear = new Date().getFullYear();
+let editingBillId = null;
+let billType = 'fixed';
+
+let db = {
+  bills: [],
+  credits: [],
+  incomes: [],
+  people: ['Pessoa 1', 'Pessoa 2', 'Pessoa 3']
+};
+
+// ===== STORAGE =====
+// 💬 loadDB() → Abre a 'gaveta' onde os dados estão guardados no aparelho e coloca tudo na memória pra usar. Se estiver vazia, começa um app novinho.
+function loadDB() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      db = { ...db, ...parsed };
+      // Ensure people array exists and titular is always present
+      if (!db.people || !Array.isArray(db.people) || db.people.length === 0) db.people = ['Pessoa 1', 'Pessoa 2', 'Pessoa 3'];
+      ensureCards();
+    }
+  } catch(e) { console.warn('Erro ao carregar dados', e); }
+}
+
+// 💬 saveDB() → Guarda (salva) tudo o que está na memória de volta na 'gaveta' do aparelho, pra não perder nada.
+function saveDB() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  syncPeopleToSupabase();
+}
+
+// 💬 genId() → Cria uma 'etiqueta' única (tipo RG) pra cada item novo, pra nunca confundir um com o outro.
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// 💬 monthKey() → Junta mês e ano num nome só (ex.: '10/2026'), pra achar as coisas daquele mês depois.
+function monthKey(month, year) {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+// 💬 fmtMoney() → Arruma um número pra aparecer bonitinho como dinheiro (R$ 1.234,56).
+function fmtMoney(v) {
+  return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+// 💬 fmtDate() → Arruma uma data pra ficar no jeito que usamos no Brasil (dia/mês/ano).
+function fmtDate(d) {
+  if (!d) return '—';
+  const parts = d.split('-');
+  if (parts.length < 3) return d;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+
+// ===== PEOPLE MANAGEMENT =====
+// 💬 renderPeopleManager() → Desenha na tela a lista de pessoas da casa, com os botões de trocar o nome ou apagar.
+function renderPeopleManager() {
+  const container = document.getElementById('peopleManager');
+  let html = '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">';
+  html += '<span style="font-size:0.85rem;font-weight:600">Pessoas</span>';
+  html += '<button class="people-help-btn" onclick="togglePeopleHelp()" title="Como funciona?" style="width:20px;height:20px;border-radius:50%;border:1px solid var(--border);background:var(--bg);color:var(--text-muted);cursor:pointer;font-size:0.7rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">?</button>';
+  html += '</div>';
+  html += '<div id="peopleHelpText" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:0.8rem;color:var(--text-muted);line-height:1.4">';
+  html += '<b>Como funciona:</b><br>';
+  html += '• A primeira pessoa \u2605 \u00e9 o <b>titular</b>.<br>';
+  html += '\u2022 Digite o nome e clique <b>+</b> para adicionar.<br>';
+  html += '\u2022 Clique \u270f\ufe0f para editar o nome.<br>';
+  html += '\u2022 Clique \u00d7 para remover.<br>';
+  html += '\u2022 Use para separar gastos no cart\u00e3o de cr\u00e9dito.';
+  html += '</div>';
+  html += db.people.map((person, idx) => `
+    <span class="person-tag ${idx === 0 ? 'titular' : ''}">
+      <span class="person-name-text">${person}${idx === 0 ? ' \u2605' : ''}</span>
+      <button class="edit-person" onclick="editPerson(${idx})" title="Editar nome">\u270f\ufe0f</button>
+      ${db.people.length > 1 ? `<button class="remove-person" onclick="removePerson(${idx})" title="Remover">\u00d7</button>` : ''}
+    </span>
+  `).join('');
+  html += `
+    <div class="add-person-inline">
+      <input type="text" id="newPersonInput" placeholder="Nova pessoa..." onkeypress="if(event.key==='Enter')addPerson()">
+      <button onclick="addPerson()" title="Adicionar pessoa">+</button>
+    </div>
+  `;
+  container.innerHTML = html;
+}
+
+// 💬 togglePeopleHelp() → Abre e fecha o textinho de ajuda que explica como funciona a parte de pessoas.
+function togglePeopleHelp() {
+  const el = document.getElementById('peopleHelpText');
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+// 💬 addPerson() → Adiciona uma pessoa nova na lista (ex.: quando alguém novo passa a usar o app).
+function addPerson() {
+  const input = document.getElementById('newPersonInput');
+  const name = input.value.trim();
+  if (!name) return;
+  if (db.people.some(p => p.toLowerCase() === name.toLowerCase())) {
+    alert('Esta pessoa já existe!');
+    return;
+  }
+  db.people.push(name);
+  saveDB();
+  renderPeopleManager();
+  updateCreditPersonDropdown();
+  renderCredits();
+  renderSummary();
+}
+
+// 💬 editPerson() → Troca o nome de uma pessoa que já existe na lista.
+function editPerson(idx) {
+  const oldName = db.people[idx];
+  if (!oldName) return;
+  const newName = prompt('Editar nome da pessoa:', oldName);
+  if (newName === null) return; // cancelled
+  const trimmed = newName.trim();
+  if (!trimmed) { alert('Nome não pode ficar vazio!'); return; }
+  if (trimmed !== oldName && db.people.some(p => p.toLowerCase() === trimmed.toLowerCase())) {
+    alert('Já existe uma pessoa com esse nome!');
+    return;
+  }
+  // Update the person name in credits too
+  db.credits.forEach(c => { if (c.person === oldName) c.person = trimmed; });
+  db.people[idx] = trimmed;
+  saveDB();
+  renderPeopleManager();
+  updateCreditPersonDropdown();
+  renderCredits();
+  renderSummary();
+}
+
+// 💬 removePerson() → Apaga uma pessoa da lista (se ela não estiver usando nada).
+function removePerson(idx) {
+  const name = db.people[idx];
+  if (!name) return;
+  if (db.people.length <= 1) { alert('Você precisa ter pelo menos uma pessoa!'); return; }
+  const hasCredits = db.credits.some(c => c.person === name);
+  if (hasCredits) {
+    if (!confirm(`"${name}" tem compras registradas. Remover mesmo assim? As compras continuarão, mas a pessoa sairá da lista.`)) return;
+  }
+  db.people.splice(idx, 1);
+  saveDB();
+  renderPeopleManager();
+  updateCreditPersonDropdown();
+  renderCredits();
+  renderSummary();
+}
+
+// 💬 updateCreditPersonDropdown() → Atualiza a lista de escolha de pessoas que aparece ao cadastrar uma compra no cartão.
+function updateCreditPersonDropdown() {
+  const select = document.getElementById('creditPerson');
+  const currentVal = select ? select.value : '';
+  if (select) {
+    select.innerHTML = db.people.map(p => `<option value="${p}">${p}${p === getTitular() ? ' (Titular)' : ''}</option>`).join('');
+    if (currentVal && db.people.includes(currentVal)) select.value = currentVal;
+  }
+}
+
+// ===== PERIOD SELECTOR =====
+// 💬 initPeriodSelector() → Prepara as setinhas e caixinhas de mês/ano que ficam no topo, pra você viajar entre os meses.
+function initPeriodSelector() {
+  const monthSel = document.getElementById('monthSelect');
+  const yearSel = document.getElementById('yearSelect');
+  MONTHS.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = m;
+    if (i === currentMonth) opt.selected = true;
+    monthSel.appendChild(opt);
+  });
+  rebuildYearSelect();
+
+  // Fill bill start month selector
+  const billStartMonth = document.getElementById('billStartMonth');
+  MONTHS.forEach((m, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = m;
+    if (i === currentMonth) opt.selected = true;
+    billStartMonth.appendChild(opt);
+  });
+  document.getElementById('billStartYear').value = currentYear;
+}
+
+// 💬 rebuildYearSelect() → Reabastece a lista de anos que dá pra escolher (vai crescendo conforme você usa o app).
+function rebuildYearSelect() {
+  const yearSel = document.getElementById('yearSelect');
+  const currentVal = parseInt(yearSel.value) || currentYear;
+  yearSel.innerHTML = '';
+  // Dynamic range: from 2024 to currentYear + 20
+  const minYear = 2024;
+  const maxYear = Math.max(realYear + 20, currentVal + 5, 2045);
+  for (let y = minYear; y <= maxYear; y++) {
+    const opt = document.createElement('option');
+    opt.value = y;
+    opt.textContent = y;
+    if (y === currentVal) opt.selected = true;
+    yearSel.appendChild(opt);
+  }
+}
+
+// 💬 changePeriod() → Roda quando você troca o mês ou o ano lá em cima: mostra os dados do período escolhido.
+function changePeriod() {
+  currentMonth = parseInt(document.getElementById('monthSelect').value);
+  currentYear = parseInt(document.getElementById('yearSelect').value);
+  // If navigating near the edge, expand years
+  if (currentYear >= Math.max(realYear + 20, currentYear + 3)) {
+    rebuildYearSelect();
+  }
+  renderAll();
+}
+
+// 💬 changeMonth() → Vai um mês pra frente ou pra trás quando você aperta ◀ ou ▶.
+function changeMonth(delta) {
+  currentMonth += delta;
+  if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  } else if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  }
+  document.getElementById('monthSelect').value = currentMonth;
+  // Check if year exists in select, if not rebuild
+  const yearSel = document.getElementById('yearSelect');
+  if (!yearSel.querySelector(`option[value="${currentYear}"]`)) {
+    rebuildYearSelect();
+  }
+  yearSel.value = currentYear;
+  renderAll();
+}
+
+// 💬 goToCurrentMonth() → Botão '📅 Mês da Fatura': pula direto pro mês em que a fatura do cartão vai vencer.
+function goToCurrentMonth() {
+  // Goes to the NEXT month (billing month), since purchases made today fall on next month's invoice
+  currentMonth = realMonth + 1;
+  currentYear = realYear;
+  if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  }
+  document.getElementById('monthSelect').value = currentMonth;
+  rebuildYearSelect();
+  document.getElementById('yearSelect').value = currentYear;
+  renderAll();
+}
+
+// 💬 updateCurrentBadge() → Mostra ou esconde o selinho 'Mês Atual' quando você está no mês de hoje.
+function updateCurrentBadge() {
+  const badge = document.getElementById('currentBadge');
+  // Billing month = real month + 1 (purchases today fall on next month's invoice)
+  let billingMonth = realMonth + 1;
+  let billingYear = realYear;
+  if (billingMonth > 11) {
+    billingMonth = 0;
+    billingYear++;
+  }
+  if (currentMonth === billingMonth && currentYear === billingYear) {
+    badge.style.display = 'inline-block';
+    badge.textContent = 'Fatura Atual';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// ===== TABS =====
+// 💬 switchTab() → Troca de 'aba' lá embaixo (Resumo, Ganhos, Contas, Cartão), como virar a página de um caderno.
+function switchTab(tab, e) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  if (e) e.target.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'dashboard') renderDashboard();
+}
+
+// ===== MODALS =====
+// 💬 openModal() → Abre uma janelinha flutuante por cima do app (tipo um formulário).
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+// 💬 closeModal() → Fecha essa janelinha flutuante.
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+// 💬 openBillModal() → Abre o formulário de conta: serve tanto pra criar uma nova conta quanto pra editar uma que já existe.
+function openBillModal(bill = null) {
+  editingBillId = bill ? bill.id : null;
+  document.getElementById('billModalTitle').textContent = bill ? 'Editar Conta' : 'Nova Conta';
+  if (bill) {
+    setBillType(bill.type);
+    document.getElementById('billDesc').value = bill.desc;
+    document.getElementById('billCategory').value = bill.category;
+    document.getElementById('billValue').value = bill.value;
+    document.getElementById('billDueDay').value = bill.dueDay;
+    // Set start month/year for both fixed and installment bills
+    document.getElementById('billStartMonth').value = bill.startMonth !== undefined ? bill.startMonth : currentMonth;
+    document.getElementById('billStartYear').value = bill.startYear || currentYear;
+    if (bill.type === 'installment') {
+      document.getElementById('billInstallments').value = bill.installments || 1;
+    }
+  } else {
+    document.getElementById('billDesc').value = '';
+    document.getElementById('billValue').value = '';
+    document.getElementById('billDueDay').value = '10';
+    document.getElementById('billInstallments').value = '1';
+    // Default start = current month being viewed
+    document.getElementById('billStartMonth').value = currentMonth;
+    document.getElementById('billStartYear').value = currentYear;
+    setBillType('fixed');
+  }
+  openModal('billModal');
+}
+
+// 💬 setBillType() → Escolhe se a conta é 'Fixa' (todo mês igual) ou 'Parcelada' (dividida em partes).
+function setBillType(type) {
+  billType = type;
+  document.querySelectorAll('#billTypeToggle button').forEach(b => b.classList.remove('active'));
+  if (type === 'fixed') {
+    document.querySelectorAll('#billTypeToggle button')[0].classList.add('active');
+    document.getElementById('installmentFields').style.display = 'none';
+  } else {
+    document.querySelectorAll('#billTypeToggle button')[1].classList.add('active');
+    document.getElementById('installmentFields').style.display = 'block';
+  }
+}
+
+// 💬 saveBill() → Confere se está tudo preenchido direitinho e guarda a conta (nova ou editada) na lista.
+function saveBill() {
+  const desc = document.getElementById('billDesc').value.trim();
+  const value = parseFloat(document.getElementById('billValue').value) || 0;
+  if (!desc || value <= 0) { alert('Preencha descrição e valor!'); return; }
+
+  const category = document.getElementById('billCategory').value;
+  const dueDay = parseInt(document.getElementById('billDueDay').value) || 10;
+  let savedBill = null;
+
+  if (editingBillId) {
+    const bill = db.bills.find(b => b.id === editingBillId);
+    if (bill) {
+      bill.desc = desc;
+      bill.category = category;
+      bill.value = value;
+      bill.dueDay = dueDay;
+      // FIX: Always update the type (allows changing fixed -> installment and vice-versa)
+      bill.type = billType;
+      if (billType === 'installment') {
+        bill.installments = parseInt(document.getElementById('billInstallments').value) || 1;
+        bill.startMonth = parseInt(document.getElementById('billStartMonth').value);
+        bill.startYear = parseInt(document.getElementById('billStartYear').value) || currentYear;
+      } else {
+        // For fixed bills, save the start month/year (when the bill began)
+        bill.startMonth = parseInt(document.getElementById('billStartMonth').value);
+        bill.startYear = parseInt(document.getElementById('billStartYear').value) || currentYear;
+        // Clean up installment-specific fields if transitioning from installment to fixed
+        delete bill.installments;
+      }
+      savedBill = bill;
+    }
+  } else {
+    savedBill = {
+      id: genId(),
+      desc,
+      category,
+      value,
+      dueDay,
+      type: billType,
+      paid: {},
+      monthOverrides: {},
+      startMonth: parseInt(document.getElementById('billStartMonth').value),
+      startYear: parseInt(document.getElementById('billStartYear').value) || currentYear,
+      createdAt: Date.now()
+    };
+    if (billType === 'installment') {
+      savedBill.installments = parseInt(document.getElementById('billInstallments').value) || 1;
+    }
+    db.bills.push(savedBill);
+  }
+
+  saveDB();
+  syncBillToSupabase(savedBill);
+  closeModal('billModal');
+  renderAll();
+}
+
+// 💬 deleteBill() → Apaga uma conta da lista, depois de você confirmar que tem certeza.
+function deleteBill(id) {
+  if (!confirm('Excluir esta conta? Isso remove de todos os meses.')) return;
+  db.bills = db.bills.filter(b => b.id !== id);
+  saveDB();
+  deleteBillFromSupabase(id);
+  renderAll();
+}
+
+// 💬 toggleBillPaid() → Marca ou desmarca a caixinha 'paguei' de uma conta no mês que você está vendo.
+function toggleBillPaid(id) {
+  const bill = db.bills.find(b => b.id === id);
+  if (!bill) return;
+  const key = monthKey(currentMonth, currentYear);
+  bill.paid[key] = !bill.paid[key];
+  saveDB();
+  syncBillToSupabase(bill);
+  renderAll();
+}
+
+// ===== BILL DISPLAY LOGIC =====
+// 💬 getBillsForMonth() → Separa quais contas existem em um mês específico (sem repetir as parcelas do passado).
+function getBillsForMonth(month, year) {
+  const key = monthKey(month, year);
+  return db.bills.filter(bill => {
+    const startIdx = (bill.startYear || 2024) * 12 + (bill.startMonth !== undefined ? bill.startMonth : 0);
+    const currentIdx = year * 12 + month;
+    if (bill.type === 'fixed') {
+      // Fixed bills: show from start date onwards (no end)
+      return currentIdx >= startIdx;
+    }
+    const endIdx = startIdx + (bill.installments || 1) - 1;
+    return currentIdx >= startIdx && currentIdx <= endIdx;
+  }).map(bill => {
+    let parcelLabel = 'Fixa';
+    if (bill.type === 'installment') {
+      const startIdx = bill.startYear * 12 + bill.startMonth;
+      const currentIdx = year * 12 + month;
+      const currentParcel = currentIdx - startIdx + 1;
+      parcelLabel = `${currentParcel}/${bill.installments}`;
+    }
+    const isPaid = bill.paid[key] || false;
+    // Check for month-specific override
+    const overrides = bill.monthOverrides || {};
+    const override = overrides[key];
+    const monthlyValue = override ? override.value : bill.value;
+    const displayDesc = override && override.desc ? override.desc : bill.desc;
+    const hasOverride = !!override;
+    return { ...bill, parcelLabel, isPaid, monthlyValue, displayDesc, hasOverride };
+  });
+}
+
+let overrideBillId = null;
+
+// 💬 openMonthOverrideModal() → Abre uma janelinha pra você dizer um valor DIFERENTE só pra um mês (ex.: a conta subiu em dezembro).
+function openMonthOverrideModal(billId) {
+  overrideBillId = billId;
+  const bill = db.bills.find(b => b.id === billId);
+  if (!bill) return;
+  const key = monthKey(currentMonth, currentYear);
+  const existing = bill.monthOverrides && bill.monthOverrides[key];
+  document.getElementById('overrideMonthLabel').textContent =
+    MONTHS[currentMonth] + ' de ' + currentYear;
+  document.getElementById('overrideDesc').value = existing && existing.desc ? existing.desc : '';
+  document.getElementById('overrideValue').value = existing && existing.value ? existing.value : bill.value;
+  openModal('monthOverrideModal');
+}
+
+// 💬 saveMonthOverride() → Guarda esse valor especial de um mês só, sem mexer nos outros meses.
+function saveMonthOverride() {
+  const bill = db.bills.find(b => b.id === overrideBillId);
+  if (!bill) return;
+  const value = parseFloat(document.getElementById('overrideValue').value) || 0;
+  if (value <= 0) { alert('Informe um valor válido!'); return; }
+  const desc = document.getElementById('overrideDesc').value.trim();
+  const key = monthKey(currentMonth, currentYear);
+  if (!bill.monthOverrides) bill.monthOverrides = {};
+  bill.monthOverrides[key] = { value, desc: desc || null };
+  saveDB();
+  syncBillToSupabase(bill);
+  closeModal('monthOverrideModal');
+  renderAll();
+}
+
+// 💬 removeMonthOverride() → Apaga esse valor especial e volta a usar o valor normal da conta.
+function removeMonthOverride(billId) {
+  const bill = db.bills.find(b => b.id === billId);
+  if (!bill) return;
+  const key = monthKey(currentMonth, currentYear);
+  if (bill.monthOverrides && bill.monthOverrides[key]) {
+    delete bill.monthOverrides[key];
+    saveDB();
+    syncBillToSupabase(bill);
+    renderAll();
+  }
+}
+
+let billSortField = null;
+let billSortDir = 'asc';
+
+// 💬 sortBills() → Organiza a lista de contas por nome, valor ou dia (clicando no título da coluna).
+function sortBills(field) {
+  if (billSortField === field) {
+    billSortDir = billSortDir === 'asc' ? 'desc' : 'asc';
+  } else {
+    billSortField = field;
+    billSortDir = 'asc';
+  }
+  renderBills();
+  updateBillSortIcons();
+}
+
+// 💬 updateBillSortIcons() → Mostra a setinha ▲ ou ▼ dizendo como a lista está organizada agora.
+function updateBillSortIcons() {
+  ['desc', 'categoria', 'valor', 'parcela', 'vencimento', 'status'].forEach(f => {
+    const el = document.getElementById('sortIcon-' + f);
+    if (!el) return;
+    el.textContent = billSortField === f ? (billSortDir === 'asc' ? ' \u25b2' : ' \u25bc') : '';
+  });
+}
+
+// 💬 compareBills() → Ajuda a decidir qual conta vem primeiro na ordem (é o 'juiz' da organização).
+function compareBills(a, b, field, dir) {
+  let va, vb;
+  switch (field) {
+    case 'desc': va = (a.displayDesc || a.desc || '').toLowerCase(); vb = (b.displayDesc || b.desc || '').toLowerCase(); break;
+    case 'categoria': va = (a.category || '').toLowerCase(); vb = (b.category || '').toLowerCase(); break;
+    case 'valor': va = a.monthlyValue; vb = b.monthlyValue; break;
+    case 'parcela': va = (a.parcelLabel || '').toLowerCase(); vb = (b.parcelLabel || '').toLowerCase(); break;
+    case 'vencimento': va = a.dueDay; vb = b.dueDay; break;
+    case 'status': va = a.isPaid ? 1 : 0; vb = b.isPaid ? 1 : 0; break;
+    default: return 0;
+  }
+  if (va < vb) return dir === 'asc' ? -1 : 1;
+  if (va > vb) return dir === 'asc' ? 1 : -1;
+  return 0;
+}
+
+// 💬 renderBills() → Desenha na tela a lista de contas do mês, com as cores e a soma total.
+function renderBills() {
+  const tbody = document.getElementById('billsBody');
+  const empty = document.getElementById('billsEmpty');
+  let bills = getBillsForMonth(currentMonth, currentYear);
+  if (billSortField) {
+    bills = [...bills].sort((a, b) => compareBills(a, b, billSortField, billSortDir));
+  }
+
+  const billsTotalEl = document.getElementById('billsTotalSummary');
+  const sumTotal = arr => arr.reduce((s, b) => s + b.monthlyValue, 0);
+  if (bills.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    if (billsTotalEl) billsTotalEl.textContent = fmtMoney(0);
+    return;
+  }
+  empty.style.display = 'none';
+  if (billsTotalEl) billsTotalEl.textContent = fmtMoney(sumTotal(bills));
+
+  tbody.innerHTML = bills.map(bill => {
+    const overrideBadge = bill.hasOverride ? '<span class="badge-parcel" style="margin-left:6px;background:var(--warning-light);color:var(--warning)">⚠ Editado este mês</span>' : '';
+    return `
+    <tr>
+      <td data-label="Descrição" style="font-weight:600;font-size:.95rem;padding-bottom:2px"><span class="cell-value">${bill.displayDesc}${overrideBadge}</span></td>
+      <td data-label="Valor" style="font-weight:700;color:var(--primary-hover);font-size:1.05rem">${fmtMoney(bill.monthlyValue)}</td>
+      <td data-label="Parcela"><span class="badge-parcel">${bill.parcelLabel}</span></td>
+      <td data-label="Vencimento" style="color:var(--text-muted)">${String(bill.dueDay).padStart(2,'0')}/${String(currentMonth+1).padStart(2,'0')}/${currentYear}</td>
+      <td data-label="Status" style="padding-top:8px;border-top:1px solid var(--border);margin-top:4px">
+        <label class="checkbox-label" style="display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text-muted);cursor:pointer">
+          <input type="checkbox" class="status-checkbox" ${bill.isPaid ? 'checked' : ''} onchange="toggleBillPaid('${bill.id}')" title="Marcar como pago">
+          ${bill.isPaid ? '<span class="badge paid">Pago</span>' : '<span class="badge pending">Pendente</span>'}
+        </label>
+      </td>
+      <td data-label="Ações" style="padding-top:8px;border-top:1px solid var(--border)">
+        <button class="icon-btn" onclick="openBillModal(db.bills.find(b=>b.id==='${bill.id}'))" title="Editar (todos os meses)">✏️</button>
+        <button class="icon-btn" onclick="openMonthOverrideModal('${bill.id}')" title="Editar só deste mês">🗓️</button>
+        ${bill.hasOverride ? `<button class="icon-btn" onclick="removeMonthOverride('${bill.id}')" title="Remover edição do mês">↩️</button>` : ''}
+        <button class="icon-btn danger" onclick="deleteBill('${bill.id}')" title="Excluir">🗑️</button>
+      </td>
+    </tr>
+  `;}).join('');
+}
+
+// ===== CREDIT CARD =====
+let editingCreditId = null;
+
+// 💬 openCreditModal() → Abre o formulário de compra do cartão: cria nova ou edita uma existente.
+function openCreditModal(credit = null, cardId = null) {
+  ensureCards();
+  editingCreditId = credit ? credit.id : null;
+  editingCardContextId = cardId || (credit ? (credit.cardId || db.cards[0].id) : (db.cards[0] && db.cards[0].id));
+  document.getElementById('creditModalTitle').textContent = credit ? 'Editar Compra do Cartão' : 'Nova Compra do Cartão';
+  const badge = document.getElementById('creditCardBadge');
+  if (badge) { badge.textContent = '💳 ' + getCardName(editingCardContextId); badge.style.display = 'block'; }
+  if (credit) {
+    document.getElementById('creditDesc').value = credit.desc || '';
+    document.getElementById('creditValue').value = credit.value || '';
+    document.getElementById('creditInstallments').value = credit.installments || 1;
+    document.getElementById('creditDate').value = credit.date || new Date().toISOString().split('T')[0];
+    updateCreditPersonDropdown();
+    document.getElementById('creditPerson').value = credit.person || getTitular();
+  } else {
+    document.getElementById('creditDesc').value = '';
+    document.getElementById('creditValue').value = '';
+    document.getElementById('creditInstallments').value = '1';
+    // Default date = next month from current viewing month
+    // currentMonth is 1-indexed (1-12), so nextMonth is already correct 1-indexed
+    let nextMonth = currentMonth + 1;
+    let nextYear = currentYear;
+    if (nextMonth > 12) { nextMonth = 1; nextYear++; }
+    const nextMonthStr = String(nextMonth).padStart(2, '0');
+    const nextDayStr = String(new Date().getDate()).padStart(2, '0');
+    document.getElementById('creditDate').value = `${nextYear}-${nextMonthStr}-${nextDayStr}`;
+    updateCreditPersonDropdown();
+    document.getElementById('creditPerson').value = getTitular();
+  }
+  openModal('creditModal');
+  document.getElementById('creditDesc').focus();
+}
+
+// 💬 autoFillDate() → Preenche a data de hoje sozinho pra você não ter que digitar.
+function autoFillDate() {
+  const dateField = document.getElementById('creditDate');
+  if (!dateField.value) {
+    dateField.value = new Date().toISOString().split('T')[0];
+  }
+}
+
+// 💬 saveCredit() → Confere os campos e guarda a compra do cartão (nova ou editada).
+function saveCredit() {
+  const desc = document.getElementById('creditDesc').value.trim();
+  const value = parseFloat(document.getElementById('creditValue').value) || 0;
+  const person = document.getElementById('creditPerson').value;
+  const installments = parseInt(document.getElementById('creditInstallments').value) || 1;
+  let date = document.getElementById('creditDate').value;
+
+  if (!desc || value <= 0) { alert('Preencha descrição e valor!'); return; }
+  if (!date) date = new Date().toISOString().split('T')[0];
+
+  const d = new Date(date + 'T00:00:00');
+  const purchaseMonth = d.getMonth();
+  const purchaseYear = d.getFullYear();
+
+  if (editingCreditId) {
+    // Edit existing credit
+    const credit = db.credits.find(c => c.id === editingCreditId);
+    if (credit) {
+      credit.desc = desc;
+      credit.value = value;
+      credit.person = person;
+      credit.installments = installments;
+      credit.date = date;
+      if (editingCardContextId) credit.cardId = editingCardContextId;
+      credit.purchaseMonth = purchaseMonth;
+      credit.purchaseYear = purchaseYear;
+      saveDB();
+      syncCreditToSupabase(credit);
+    }
+  } else {
+    // Create new credit
+    const now = new Date();
+    const addedAtDate = now.toISOString().split('T')[0];
+    const newCredit = {
+      id: genId(),
+      desc,
+      value,
+      person,
+      installments,
+      date,
+      purchaseMonth,
+      purchaseYear,
+      cardId: editingCardContextId || (db.cards[0] && db.cards[0].id),
+      createdAt: Date.now(),
+      addedAt: addedAtDate
+    };
+    db.credits.push(newCredit);
+    saveDB();
+    syncCreditToSupabase(newCredit);
+  }
+
+  closeModal('creditModal');
+  renderAll();
+}
+
+// 💬 deleteCredit() → Apaga uma compra do cartão depois de você confirmar.
+function deleteCredit(id) {
+  if (!confirm('Excluir esta compra?')) return;
+  db.credits = db.credits.filter(c => c.id !== id);
+  saveDB();
+  deleteCreditFromSupabase(id);
+  renderAll();
+}
+
+// 💬 getCreditsForMonth() → Separa quais compras do cartão pertencem ao mês escolhido.
+function getCreditsForMonth(month, year) {
+  return db.credits.filter(credit => {
+    const startIdx = credit.purchaseYear * 12 + credit.purchaseMonth;
+    const currentIdx = year * 12 + month;
+    const endIdx = startIdx + credit.installments - 1;
+    return currentIdx >= startIdx && currentIdx <= endIdx;
+  }).map(credit => {
+    const startIdx = credit.purchaseYear * 12 + credit.purchaseMonth;
+    const currentIdx = year * 12 + month;
+    const currentParcel = currentIdx - startIdx + 1;
+    const parcelValue = credit.value / credit.installments;
+    return { ...credit, currentParcel, parcelValue };
+  });
+}
+
+
+// 💬 validatePdfDateRange() → Confere se as datas escolhidas pro PDF fazem sentido (a data de início não pode vir depois da final).
+function validatePdfDateRange() {
+  const fromInput = document.getElementById('pdfDateFrom');
+  const toInput = document.getElementById('pdfDateTo');
+  const dateFrom = fromInput.value;
+  const dateTo = toInput.value;
+
+  // If both filled, check order
+  if (dateFrom && dateTo) {
+    const dFrom = new Date(dateFrom + 'T00:00:00');
+    const dTo = new Date(dateTo + 'T00:00:00');
+
+    if (isNaN(dFrom.getTime())) {
+      alert('Data inicial inválida! Verifique o dia do mês.');
+      fromInput.value = '';
+      return;
+    }
+    if (isNaN(dTo.getTime())) {
+      alert('Data final inválida! Verifique o dia do mês.');
+      toInput.value = '';
+      return;
+    }
+    if (dFrom > dTo) {
+      alert('A data inicial não pode ser maior que a data final!');
+      toInput.value = dateFrom;
+      return;
+    }
+  }
+
+  // Validate individual dates (browsers may allow invalid days like 31/09)
+  if (dateFrom) {
+    const d = new Date(dateFrom + 'T00:00:00');
+    const [y, m, day] = dateFrom.split('-').map(Number);
+    if (d.getDate() !== day || d.getMonth() !== m - 1 || d.getFullYear() !== y) {
+      alert('Data inicial inválida! Esse dia não existe no mês selecionado.\nExemplo: setembro tem apenas 30 dias.');
+      fromInput.value = '';
+      return;
+    }
+  }
+  if (dateTo) {
+    const d = new Date(dateTo + 'T00:00:00');
+    const [y, m, day] = dateTo.split('-').map(Number);
+    if (d.getDate() !== day || d.getMonth() !== m - 1 || d.getFullYear() !== y) {
+      alert('Data final inválida! Esse dia não existe no mês selecionado.\nExemplo: setembro tem apenas 30 dias.');
+      toInput.value = '';
+      return;
+    }
+  }
+}
+
+// 💬 openCreditPdfModal() → Abre a janelinha com os filtros antes de gerar o PDF (cartão, pessoa, período).
+function openCreditPdfModal(cardId = null) {
+  ensureCards();
+  // Populate card filter dropdown
+  const cardSelect = document.getElementById('pdfCardFilter');
+  if (cardSelect) {
+    cardSelect.innerHTML = '<option value="">Todos os cartões</option>';
+    (db.cards || []).forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      cardSelect.appendChild(opt);
+    });
+    if (cardId) cardSelect.value = cardId;
+  }
+  // Populate person filter dropdown
+  const personSelect = document.getElementById('pdfPersonFilter');
+  personSelect.innerHTML = '<option value="">Todas as pessoas</option>';
+  db.people.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p + (p === getTitular() ? ' (Titular)' : '');
+    personSelect.appendChild(opt);
+  });
+
+  // Default dates = current viewing month range
+  const monthStr = String(currentMonth).padStart(2, '0');
+  document.getElementById('pdfDateFrom').value = `${currentYear}-${monthStr}-01`;
+  const lastDay = new Date(currentYear, currentMonth, 0).getDate();
+  document.getElementById('pdfDateTo').value = `${currentYear}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
+
+  openModal('creditPdfModal');
+}
+
+// 💬 generateCreditPDF() → Monta o PDF: escreve o cabeçalho, os filtros e a tabelinha das compras, e baixa o arquivo.
+function generateCreditPDF() {
+  const personFilter = document.getElementById('pdfPersonFilter').value;
+  const cardFilterSel = document.getElementById('pdfCardFilter');
+  const cardFilter = cardFilterSel ? cardFilterSel.value : '';
+  const dateFrom = document.getElementById('pdfDateFrom').value;
+  const dateTo = document.getElementById('pdfDateTo').value;
+  const sortBy = document.getElementById('pdfSortBy').value;
+
+  // Validate dates
+  if (dateFrom && dateTo) {
+    const dFrom = new Date(dateFrom + 'T00:00:00');
+    const dTo = new Date(dateTo + 'T00:00:00');
+    if (isNaN(dFrom.getTime()) || isNaN(dTo.getTime())) {
+      alert('Data inválida! Verifique as datas informadas.');
+      return;
+    }
+    if (dFrom > dTo) {
+      alert('A data inicial não pode ser maior que a data final!');
+      return;
+    }
+  }
+  if (dateFrom && isNaN(new Date(dateFrom + 'T00:00:00').getTime())) {
+    alert('Data inicial inválida!');
+    return;
+  }
+  if (dateTo && isNaN(new Date(dateTo + 'T00:00:00').getTime())) {
+    alert('Data final inválida!');
+    return;
+  }
+
+  // Deduplicate by ID (in case of sync issues)
+  const seenIds = new Set();
+  let uniqueCredits = db.credits.filter(c => {
+    if (cardFilter && c.cardId !== cardFilter) return false;
+    if (seenIds.has(c.id)) return false;
+    seenIds.add(c.id);
+    return true;
+  });
+
+  // Expand each purchase into individual parcels with correct vencimento date and parcel value
+  let purchases = [];
+  uniqueCredits.forEach(c => {
+    const installments = c.installments || 1;
+    const parcelValue = (c.value || 0) / installments;
+    const baseDate = c.date || '';
+    if (!baseDate) return;
+
+    // Parse the base vencimento date (first parcel)
+    const baseDateObj = new Date(baseDate + 'T00:00:00');
+    if (isNaN(baseDateObj.getTime())) return;
+    const baseYear = baseDateObj.getFullYear();
+    const baseMonth = baseDateObj.getMonth();
+
+    for (let i = 0; i < installments; i++) {
+      const parcelMonth = baseMonth + i;
+      const parcelDate = new Date(baseYear, parcelMonth, 1);
+      const parcelDateStr = parcelDate.getFullYear() + '-' +
+        String(parcelDate.getMonth() + 1).padStart(2, '0') + '-' +
+        String(baseDateObj.getDate()).padStart(2, '0');
+
+      purchases.push({
+        id: c.id + '_p' + (i + 1),
+        originalId: c.id,
+        desc: c.desc || '—',
+        person: c.person || '—',
+        installments: installments,
+        currentParcel: i + 1,
+        parcelValue: parcelValue,
+        totalValue: c.value || 0,
+        date: parcelDateStr,
+        addedAt: c.addedAt || ''
+      });
+    }
+  });
+
+  // Filter by person (exact match)
+  if (personFilter) {
+    purchases = purchases.filter(c => c.person === personFilter);
+  }
+
+  // Filter by date range (vencimento)
+  if (dateFrom) {
+    purchases = purchases.filter(c => c.date && c.date >= dateFrom);
+  }
+  if (dateTo) {
+    purchases = purchases.filter(c => c.date && c.date <= dateTo);
+  }
+
+  if (purchases.length === 0) {
+    alert('Nenhuma compra encontrada com os filtros selecionados.');
+    return;
+  }
+
+  // Sort
+  purchases.sort((a, b) => {
+    if (sortBy === 'value') return b.parcelValue - a.parcelValue;
+    if (sortBy === 'person') return a.person.localeCompare(b.person);
+    if (sortBy === 'desc') return a.desc.localeCompare(b.desc);
+    if (sortBy === 'addedAt') return (a.addedAt || '').localeCompare(b.addedAt || '');
+    return (a.date || '').localeCompare(b.date || '');
+  });
+
+  // Generate PDF
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  // Title
+  doc.setFontSize(16);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Compras do Cartão' + (cardFilter ? ' \u2014 ' + getCardName(cardFilter) : ' \u2014 Todos os Cartões'), 14, 18);
+
+  // Filters summary
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  let filterDesc = 'Filtros: ';
+  if (personFilter) filterDesc += `Pessoa: ${personFilter} | `;
+  if (dateFrom) filterDesc += `De: ${fmtDate(dateFrom)} | `;
+  if (dateTo) filterDesc += `Até: ${fmtDate(dateTo)} | `;
+  filterDesc += `Total: ${purchases.length} compra(s)`;
+  doc.text(filterDesc, 14, 25);
+
+  // Build table rows manually — each row is a flat array of 6 strings
+  const headRow = [['Compra', 'Pessoa', 'Parcela', 'Valor da Parcela', 'Vencimento', 'Adicionado em']];
+  const bodyRows = purchases.map(c => [
+    String(c.desc || '—'),
+    String(c.person + (c.person === getTitular() ? ' (Titular)' : '')),
+    String(c.installments > 1 ? c.currentParcel + '/' + c.installments : 'À vista'),
+    'R$ ' + Number(c.parcelValue).toFixed(2).replace('.', ','),
+    String(c.date ? fmtDate(c.date) : '—'),
+    String(c.addedAt ? fmtDate(c.addedAt) : '—')
+  ]);
+
+  const grandTotal = purchases.reduce((s, c) => s + Number(c.parcelValue || 0), 0);
+  const footRow = [['', '', '', 'Total: R$ ' + grandTotal.toFixed(2).replace('.', ','), '', '']];
+
+  // Use autoTable — try functional API first, fall back to plugin method
+  const tableConfig = {
+    head: headRow,
+    body: bodyRows,
+    foot: footRow,
+    startY: 30,
+    margin: { left: 14, right: 14 },
+    headStyles: { fillColor: [99, 102, 241], textColor: 255, fontSize: 9 },
+    bodyStyles: { fontSize: 9 },
+    footStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold', fontSize: 9 },
+    columnStyles: {
+      0: { cellWidth: 55 },
+      1: { cellWidth: 35 },
+      2: { cellWidth: 22 },
+      3: { cellWidth: 35, halign: 'right' },
+      4: { cellWidth: 35 },
+      5: { cellWidth: 35 }
+    }
+  };
+
+  if (typeof autoTable === 'function') {
+    autoTable(doc, tableConfig);
+  } else if (typeof doc.autoTable === 'function') {
+    doc.autoTable(tableConfig);
+  } else {
+    // Fallback: manual table drawing
+    console.error('autoTable plugin not loaded');
+    alert('Erro ao gerar PDF: plugin de tabela não carregou. Recarregue a página e tente novamente.');
+    return;
+  }
+
+  // Footer with generation date
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setTextColor(150);
+    doc.text(
+      'Gerado em ' + new Date().toLocaleString('pt-BR') + ' - Controle Financeiro',
+      14, doc.internal.pageSize.height - 8
+    );
+  }
+
+  const cardNamePart = cardFilter ? getCardName(cardFilter).replace(/\s+/g, '-').toLowerCase() : '';
+  const filename = 'compras-cartao' + (cardNamePart ? '-' + cardNamePart : '') + (personFilter ? '-' + personFilter : '') + '-' + new Date().toISOString().split('T')[0] + '.pdf';
+  window.__filename = filename;
+  // Dentro do app Android: PDF direto para Downloads via ponte nativa
+  if (window.AndroidDownload && typeof window.AndroidDownload.saveFile === 'function') {
+    AndroidDownload.saveFile(filename, doc.output('datauristring'));
+    closeModal('creditPdfModal');
+    return;
+  }
+  doc.save(filename);
+  closeModal('creditPdfModal');
+}
+
+// ===== CREDIT SORTING =====
+let creditSortField = null;
+let creditSortDir = 'asc';
+
+// ===== ORDENAÇÃO (por cartão) =====
+const cardSortState = {};
+
+// 💬 sortCredits() → Organiza as compras de um cartão por data, valor ou pessoa.
+function sortCredits(field, cardId) {
+  const st = cardSortState[cardId] || (cardSortState[cardId] = { field: null, dir: 'asc' });
+  if (st.field === field) st.dir = st.dir === 'asc' ? 'desc' : 'asc';
+  else { st.field = field; st.dir = 'asc'; }
+  const card = getCardById(cardId);
+  if (card) renderCardRows(card);
+  updateCreditSortIcons(cardId);
+}
+
+// 💬 updateCreditSortIcons() → Atualiza as setinhas ▲▼ de organização da lista de compras.
+function updateCreditSortIcons(cardId) {
+  const st = cardSortState[cardId] || {};
+  ['desc', 'valor', 'person', 'parcela', 'vencimento', 'addedAt'].forEach(f => {
+    const el = document.getElementById('creditSortIcon-' + f + '_' + cardId);
+    if (!el) return;
+    el.textContent = st.field === f ? (st.dir === 'asc' ? ' \u25b2' : ' \u25bc') : '';
+  });
+}
+
+// 💬 compareCredits() → O 'juiz' que decide qual compra vem antes na organização.
+function compareCredits(a, b, field, dir) {
+  let va, vb;
+  switch (field) {
+    case 'desc': va = (a.desc || '').toLowerCase(); vb = (b.desc || '').toLowerCase(); break;
+    case 'valor': va = a.parcelValue; vb = b.parcelValue; break;
+    case 'person': va = (a.person || '').toLowerCase(); vb = (b.person || '').toLowerCase(); break;
+    case 'parcela': va = a.installments > 1 ? a.currentParcel : 0; vb = b.installments > 1 ? b.currentParcel : 0; break;
+    case 'vencimento': va = a.date || ''; vb = b.date || ''; break;
+    case 'addedAt': va = a.addedAt || ''; vb = b.addedAt || ''; break;
+    default: return 0;
+  }
+  if (va < vb) return dir === 'asc' ? -1 : 1;
+  if (va > vb) return dir === 'asc' ? 1 : -1;
+  return 0;
+}
+
+// ===== CARTÕES DE CRÉDITO (múltiplos) =====
+const CARD_COLORS = ['#ec4899', '#f59e0b', '#10b981', '#6366f1', '#3b82f6', '#8b5cf6', '#ef4444', '#14b8a6'];
+let editingCardContextId = null;
+let editingCardModalId = null;
+let selectedCardColor = CARD_COLORS[0];
+
+// 💬 ensureCards() → Garante que exista pelo menos um cartão na lista (cria um 'Cartão 1' se não houver nenhum).
+function ensureCards() {
+  if (!Array.isArray(db.cards) || db.cards.length === 0) {
+    db.cards = [{ id: 'card-main', name: 'Cartão Principal', color: '#ec4899' }];
+  }
+  if (Array.isArray(db.credits)) {
+    db.credits.forEach(c => { if (!c.cardId) c.cardId = db.cards[0].id; });
+  }
+}
+
+// 💬 getCardById() → Procura um cartão pelo número dele (o 'RG' do cartão) e devolve o cartão.
+function getCardById(id) { return (db.cards || []).find(c => c.id === id); }
+// 💬 getCardName() → Devolve só o nome do cartão (ex.: 'Nubank'), sem o cartão inteiro.
+function getCardName(id) { const c = getCardById(id); return c ? c.name : 'Cartão'; }
+// 💬 escapeHtmlCard() → Deixa textos 'muros' seguros: se alguém digitar caracteres estranhos, eles viram texto inofensivo na tela.
+function escapeHtmlCard(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+// 💬 hexToRgba() → Converte uma cor (ex.: #ff0000) pra poder usá-la com transparência (tipo vidro fosco).
+function hexToRgba(hex, a) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return 'rgba(236, 72, 153, ' + a + ')';
+  const n = parseInt(m[1], 16);
+  return 'rgba(' + ((n >> 16) & 255) + ', ' + ((n >> 8) & 255) + ', ' + (n & 255) + ', ' + a + ')';
+}
+
+// 💬 renderCredits() → Desenha TODOS os cartões na tela, um por um, com suas faturas.
+function renderCredits() {
+  ensureCards();
+  renderPeopleManager();
+  renderPersonsSummary();
+  const container = document.getElementById('cardsContainer');
+  if (!container) return;
+  container.innerHTML = (db.cards || []).map(renderCardSection).join('');
+  applyAccordionStates(container);
+  (db.cards || []).forEach(card => renderCardRows(card));
+}
+
+// 💬 renderCardSection() → Desenha a área de UM cartão: nome, cor, total e botões dele.
+function renderCardSection(card) {
+  const id = card.id;
+  const style = '--credit-accent:' + card.color + ';--credit-accent-light:' + hexToRgba(card.color, 0.08) + ';--credit-border:' + hexToRgba(card.color, 0.3);
+  return `
+  <div class="section section-credit" style="${style}">
+    <details class="section-disclosure" data-acc-key="card_${id}" ontoggle="sectionActionsToggled(this)">
+      <summary class="section-header"><div class="section-title"><span class="icon"></span><span class="title-emoji">💳</span><span class="title-text">${escapeHtmlCard(card.name)}</span></div><span class="section-total credit-total" id="totalInvoiceChip_${id}" title="Valor total da fatura">R$ 0,00</span><span class="disclosure-chevron" aria-hidden="true">⌄</span></summary>
+      <div class="section-actions">
+        <button class="btn btn-ghost" onclick="openCardModal('${id}')" title="Editar / excluir cartão">⚙️ Editar cartão</button>
+        <button class="btn" onclick="openCreditModal(null,'${id}')">+ Nova Compra</button>
+        <button class="btn btn-ghost" onclick="openCreditPdfModal('${id}')">📄 PDF</button>
+      </div>
+    <div class="total-fatura">
+      <span class="label"> Valor Total da Fatura</span>
+      <span class="value" id="totalInvoice_${id}">R$ 0,00</span>
+    </div>
+    <div class="table-wrap">
+      <table id="creditTable_${id}">
+        <thead>
+          <tr>
+            <th onclick="sortCredits('desc','${id}')" style="cursor:pointer;user-select:none">Compra<span id="creditSortIcon-desc_${id}" class="sort-icon"></span></th>
+            <th onclick="sortCredits('valor','${id}')" style="cursor:pointer;user-select:none">Valor (R$)<span id="creditSortIcon-valor_${id}" class="sort-icon"></span></th>
+            <th onclick="sortCredits('person','${id}')" style="cursor:pointer;user-select:none">Quem Comprou<span id="creditSortIcon-person_${id}" class="sort-icon"></span></th>
+            <th onclick="sortCredits('parcela','${id}')" style="cursor:pointer;user-select:none">Parcela<span id="creditSortIcon-parcela_${id}" class="sort-icon"></span></th>
+            <th onclick="sortCredits('vencimento','${id}')" style="cursor:pointer;user-select:none">Vencimento<span id="creditSortIcon-vencimento_${id}" class="sort-icon"></span></th>
+            <th onclick="sortCredits('addedAt','${id}')" style="cursor:pointer;user-select:none">Adicionado em<span id="creditSortIcon-addedAt_${id}" class="sort-icon"></span></th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="creditBody_${id}"></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="creditEmpty_${id}">Nenhuma compra cadastrada neste mês.</div>
+    </details>
+  </div>`;
+}
+
+// 💬 renderCardRows() → Desenha as linhas de compras de um cartão (quem comprou, o quê, quanto e quando).
+function renderCardRows(card) {
+  const id = card.id;
+  const tbody = document.getElementById('creditBody_' + id);
+  const empty = document.getElementById('creditEmpty_' + id);
+  if (!tbody) return;
+  let credits = getCreditsForMonth(currentMonth, currentYear).filter(c => c.cardId === card.id);
+
+  if (credits.length === 0) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    const t0 = document.getElementById('totalInvoice_' + id);
+    if (t0) t0.textContent = fmtMoney(0);
+    const c0 = document.getElementById('totalInvoiceChip_' + id);
+    if (c0) c0.textContent = fmtMoney(0);
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  const st = cardSortState[id];
+  if (st && st.field) credits = [...credits].sort((a, b) => compareCredits(a, b, st.field, st.dir));
+
+  tbody.innerHTML = credits.map(c => `
+    <tr>
+      <td data-label="Compra" style="font-weight:600;font-size:.95rem">${escapeHtmlCard(c.desc)}</td>
+      <td data-label="Valor" style="font-weight:700;color:var(--primary-hover);font-size:1.05rem">${fmtMoney(c.parcelValue)}</td>
+      <td data-label="Quem Comprou">${c.person === getTitular() ? `<strong style="color:var(--success)">${escapeHtmlCard(c.person)} (Titular)</strong>` : escapeHtmlCard(c.person)}</td>
+      <td data-label="Parcela"><span class="badge-parcel">${c.installments > 1 ? c.currentParcel + '/' + c.installments : 'À vista'}</span></td>
+      <td data-label="Vencimento" style="color:var(--text-muted)">${fmtDate(c.date)}</td>
+      <td data-label="Adicionado em" style="color:var(--text-muted);font-size:.85rem">${c.addedAt ? fmtDate(c.addedAt) : '—'}</td>
+      <td data-label="Ações" style="padding-top:8px;border-top:1px solid var(--border)">
+        <button class="icon-btn" onclick="openCreditModal(db.credits.find(c=>c.id==='${c.id}'))" title="Editar">✏️</button>
+        <button class="icon-btn danger" onclick="deleteCredit('${c.id}')" title="Excluir">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+
+  const grandTotal = credits.reduce((s, c) => s + c.parcelValue, 0);
+  const t = document.getElementById('totalInvoice_' + id);
+  if (t) t.textContent = fmtMoney(grandTotal);
+  const chip = document.getElementById('totalInvoiceChip_' + id);
+  if (chip) chip.textContent = fmtMoney(grandTotal);
+}
+
+// 💬 renderPersonsSummary() → Mostra o resuminho de quanto cada pessoa gastou no cartão naquele mês.
+function renderPersonsSummary() {
+  const summary = document.getElementById('personsSummary');
+  if (!summary) return;
+  const credits = getCreditsForMonth(currentMonth, currentYear);
+  if (credits.length === 0) { summary.innerHTML = ''; return; }
+  const personTotals = {};
+  db.people.forEach(p => personTotals[p] = 0);
+  credits.forEach(c => { personTotals[c.person] = (personTotals[c.person] || 0) + c.parcelValue; });
+  const allPeopleWithTotals = Object.keys(personTotals).filter(p => personTotals[p] > 0);
+  summary.innerHTML = allPeopleWithTotals.map(p => `
+    <div class="person-card ${p === getTitular() ? 'titular' : ''}">
+      <div class="pname">${escapeHtmlCard(p)}${p === getTitular() ? ' (Titular)' : ''}</div>
+      <div class="pvalue">${fmtMoney(personTotals[p])}</div>
+    </div>
+  `).join('');
+}
+
+// ===== MODAL DO CARTÃO (criar / editar / excluir) =====
+// 💬 openCardModal() → Abre o formulário pra criar um cartão novo ou editar um que existe.
+function openCardModal(cardId = null) {
+  ensureCards();
+  editingCardModalId = cardId;
+  const card = cardId ? getCardById(cardId) : null;
+  document.getElementById('cardModalTitle').textContent = card ? 'Editar Cartão' : 'Novo Cartão de Crédito';
+  document.getElementById('cardName').value = card ? card.name : '';
+  if (card) {
+    selectedCardColor = card.color;
+  } else {
+    const used = (db.cards || []).map(c => c.color);
+    selectedCardColor = CARD_COLORS.find(c => !used.includes(c)) || CARD_COLORS[(db.cards || []).length % CARD_COLORS.length];
+  }
+  renderCardPalette();
+  document.getElementById('cardDeleteZone').style.display = card ? '' : 'none';
+  openModal('cardModal');
+  setTimeout(() => document.getElementById('cardName').focus(), 120);
+}
+
+// 💬 renderCardPalette() → Desenha as bolinhas de cores que você pode escolher pro cartão.
+function renderCardPalette() {
+  const pal = document.getElementById('cardColorPalette');
+  if (!pal) return;
+  pal.innerHTML = CARD_COLORS.map(c =>
+    `<div class="color-swatch${c === selectedCardColor ? ' selected' : ''}" style="background:${c}" onclick="selectCardColor('${c}')" title="Escolher esta cor"></div>`
+  ).join('');
+}
+
+// 💬 selectCardColor() → Guarda a cor que você escolheu pra dar pra cara do cartão.
+function selectCardColor(c) { selectedCardColor = c; renderCardPalette(); }
+
+// 💬 saveCard() → Guarda o cartão (novo ou editado) na lista de cartões.
+function saveCard() {
+  const name = document.getElementById('cardName').value.trim();
+  if (!name) { alert('Dê um nome ao cartão!'); return; }
+  if (editingCardModalId) {
+    const card = getCardById(editingCardModalId);
+    if (card) { card.name = name; card.color = selectedCardColor; }
+  } else {
+    db.cards.push({ id: genId(), name, color: selectedCardColor });
+  }
+  saveDB();
+  closeModal('cardModal');
+  renderAll();
+}
+
+// 💬 deleteCard() → Apaga um cartão (só se ele não tiver nenhuma compra dentro).
+function deleteCard() {
+  const card = getCardById(editingCardModalId);
+  if (!card) return;
+  const count = (db.credits || []).filter(c => c.cardId === card.id).length;
+  const msg = count > 0
+    ? 'Excluir o cartão "' + card.name + '"?\n\nAs ' + count + ' compra(s) registradas nele também serão excluídas permanentemente.'
+    : 'Excluir o cartão "' + card.name + '"?';
+  if (!confirm(msg)) return;
+  if (!confirm('Tem certeza? Esta ação não pode ser desfeita!')) return;
+  db.cards = db.cards.filter(c => c.id !== card.id);
+  db.credits = db.credits.filter(c => c.cardId !== card.id);
+  ensureCards();
+  saveDB();
+  closeModal('cardModal');
+  renderAll();
+}
+
+// 💬 renderCreditsOld_removed() → (Função antiga, não é mais usada. Ficou aqui só de recordação.)
+function renderCreditsOld_removed() {}
+
+// ===== INCOME =====
+let editingIncomeId = null;
+
+// 💬 openIncomeModal() → Abre o formulário de ganho: criar novo ou editar um que já existe.
+function openIncomeModal(income = null) {
+  editingIncomeId = income ? income.id : null;
+  document.getElementById('incomeModalTitle').textContent = income ? 'Editar Ganho / Receita' : 'Novo Ganho / Receita';
+  const recurringSelect = document.getElementById('incomeRecurring');
+  const overrideOption = recurringSelect.querySelector('option[value="override"]');
+  if (income) {
+    document.getElementById('incomeDesc').value = income.desc || '';
+    document.getElementById('incomeValue').value = income.value || '';
+    document.getElementById('incomeDate').value = income.date || new Date().toISOString().split('T')[0];
+    document.getElementById('incomeRecurring').value = income.recurring ? 'yes' : 'no';
+    // Only show "override" option when editing an existing recurring income
+    if (overrideOption) overrideOption.style.display = income.recurring ? '' : 'none';
+  } else {
+    document.getElementById('incomeDesc').value = '';
+    document.getElementById('incomeValue').value = '';
+    document.getElementById('incomeDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('incomeRecurring').value = 'no';
+    if (overrideOption) overrideOption.style.display = 'none';
+  }
+  openModal('incomeModal');
+}
+
+// 💬 saveIncome() → Confere os campos e guarda o ganho (salário, extra etc.).
+function saveIncome() {
+  const desc = document.getElementById('incomeDesc').value.trim();
+  const value = parseFloat(document.getElementById('incomeValue').value) || 0;
+  let date = document.getElementById('incomeDate').value;
+  const recurringVal = document.getElementById('incomeRecurring').value;
+
+  if (!desc || value <= 0) { alert('Preencha descrição e valor!'); return; }
+  if (!date) date = new Date().toISOString().split('T')[0];
+
+  const d = new Date(date + 'T00:00:00');
+
+  if (editingIncomeId) {
+    const income = db.incomes.find(i => i.id === editingIncomeId);
+    if (income) {
+      if (recurringVal === 'override') {
+        // Create/update a month-specific override WITHOUT touching the recurring income
+        if (!income.monthOverrides) income.monthOverrides = {};
+        const key = monthKey(currentMonth, currentYear);
+        income.monthOverrides[key] = { value, desc: desc !== income.desc ? desc : null };
+        saveDB();
+        syncIncomeToSupabase(income);
+      } else {
+        // Normal edit — affects all months
+        const recurring = recurringVal === 'yes';
+        income.desc = desc;
+        income.value = value;
+        income.date = date;
+        income.recurring = recurring;
+        income.month = d.getMonth();
+        income.year = d.getFullYear();
+        saveDB();
+        syncIncomeToSupabase(income);
+      }
+    }
+  } else {
+    // Create new income
+    const recurring = recurringVal === 'yes';
+    const newIncome = {
+      id: genId(),
+      desc,
+      value,
+      date,
+      recurring,
+      month: d.getMonth(),
+      year: d.getFullYear(),
+      monthOverrides: {},
+      createdAt: Date.now()
+    };
+    db.incomes.push(newIncome);
+    saveDB();
+    syncIncomeToSupabase(newIncome);
+  }
+  closeModal('incomeModal');
+  renderAll();
+}
+
+// 💬 deleteIncome() → Apaga um ganho depois de você confirmar.
+function deleteIncome(id) {
+  if (!confirm('Excluir este ganho?')) return;
+  db.incomes = db.incomes.filter(i => i.id !== id);
+  saveDB();
+  deleteIncomeFromSupabase(id);
+  renderAll();
+}
+
+// 💬 removeIncomeOverride() → Apaga um valor especial que valia só num mês e volta ao valor normal.
+function removeIncomeOverride(incomeId) {
+  const income = db.incomes.find(i => i.id === incomeId);
+  if (!income || !income.monthOverrides) return;
+  const key = monthKey(currentMonth, currentYear);
+  if (income.monthOverrides[key]) {
+    delete income.monthOverrides[key];
+    saveDB();
+    syncIncomeToSupabase(income);
+    renderAll();
+  }
+}
+
+// 💬 getIncomesForMonth() → Separa quais ganhos pertencem ao mês escolhido.
+function getIncomesForMonth(month, year) {
+  return db.incomes.filter(income => {
+    if (income.recurring) {
+      const startIdx = income.year * 12 + income.month;
+      const currentIdx = year * 12 + month;
+      return currentIdx >= startIdx;
+    }
+    return income.month === month && income.year === year;
+  }).map(income => {
+    const key = monthKey(month, year);
+    const overrides = income.monthOverrides || {};
+    const override = overrides[key];
+    const monthlyValue = override ? override.value : income.value;
+    const displayDesc = override && override.desc ? override.desc : income.desc;
+    const hasOverride = !!override;
+    return { ...income, monthlyValue, displayDesc, hasOverride };
+  });
+}
+
+// 💬 renderIncomes() → Desenha na tela a lista de ganhos do mês, com quem recebeu e a soma.
+function renderIncomes() {
+  const tbody = document.getElementById('incomeBody');
+  const empty = document.getElementById('incomeEmpty');
+  const incomes = getIncomesForMonth(currentMonth, currentYear);
+
+  if (incomes.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = incomes.map(inc => {
+    const overrideBadge = inc.hasOverride ? '<span class="badge-parcel" style="margin-left:6px;background:var(--warning-light);color:var(--warning)">⚠ Editado este mês</span>' : '';
+    return `
+    <tr>
+      <td data-label="Descrição" style="font-weight:600;font-size:.95rem"><span class="cell-value">${inc.displayDesc}${inc.recurring ? ' <span class="badge-parcel">Recorrente</span>' : ''}${overrideBadge}</span></td>
+      <td data-label="Valor" style="font-weight:700;color:var(--success);font-size:1.05rem">${fmtMoney(inc.monthlyValue)}</td>
+      <td data-label="Data" style="color:var(--text-muted)">${fmtDate(inc.date)}</td>
+      <td data-label="Ações" style="padding-top:8px;border-top:1px solid var(--border)">
+        <button class="icon-btn" onclick="openIncomeModal(db.incomes.find(i=>i.id==='${inc.id}'))" title="Editar">✏️</button>
+        ${inc.hasOverride ? `<button class="icon-btn" onclick="removeIncomeOverride('${inc.id}')" title="Remover edição do mês">↩️</button>` : ''}
+        <button class="icon-btn danger" onclick="deleteIncome('${inc.id}')" title="Excluir">🗑️</button>
+      </td>
+    </tr>
+  `}).join('');
+}
+
+// ===== SUMMARY CARDS =====
+// 💬 renderSummary() → Calcula e mostra os 3 cartõezinhos de cima: quanto entrou, quanto saiu e quanto sobrou.
+function renderSummary() {
+  const incomes = getIncomesForMonth(currentMonth, currentYear);
+  const bills = getBillsForMonth(currentMonth, currentYear);
+  const credits = getCreditsForMonth(currentMonth, currentYear);
+
+  const totalIncome = incomes.reduce((s, i) => s + i.monthlyValue, 0);
+  const totalBills = bills.reduce((s, b) => s + b.monthlyValue, 0);
+  const titularCredit = credits
+    .filter(c => c.person === getTitular())
+    .reduce((s, c) => s + c.parcelValue, 0);
+  const totalExpenses = totalBills + titularCredit;
+  const balance = totalIncome - totalExpenses;
+
+  document.getElementById('incomeCard').textContent = fmtMoney(totalIncome);
+  document.getElementById('expenseCard').textContent = fmtMoney(totalExpenses);
+
+  const balCard = document.getElementById('balanceCard');
+  balCard.textContent = fmtMoney(balance);
+  balCard.className = 'card-value ' + (balance >= 0 ? 'positive' : 'negative');
+}
+
+
+// ===== DASHBOARD =====
+let dashCharts = {};
+
+// 💬 destroyDashCharts() → Apaga os gráficos antigos da tela antes de desenhar os novos (pra não ficar um em cima do outro).
+function destroyDashCharts() {
+  Object.values(dashCharts).forEach(c => { if (c) c.destroy(); });
+  dashCharts = {};
+}
+
+// 💬 renderDashboard() → Monta a tela 'Resumo': os números grandes e os gráficos de ganhos x gastos do mês.
+function renderDashboard() {
+  const year = currentYear;
+  document.getElementById('dashYearLabel').textContent = '📅 Panorama de ' + year;
+
+  destroyDashCharts();
+
+  const monthLabels = MONTHS.map(m => m.substring(0, 3));
+  let incomeData = [];
+  let expenseData = [];
+  let balanceData = [];
+  let cumulativeData = [];
+  let cartaoData = [];
+  let categoryTotals = {};
+  let personTotals = {};
+  let cumulative = 0;
+
+  for (let m = 0; m < 12; m++) {
+    // Income
+    const incomes = getIncomesForMonth(m, year);
+    const incTotal = incomes.reduce((s, i) => s + i.monthlyValue, 0);
+    incomeData.push(incTotal);
+
+    // Bills
+    const bills = getBillsForMonth(m, year);
+    const billsTotal = bills.reduce((s, b) => s + b.monthlyValue, 0);
+
+    // Titular credit
+    const credits = getCreditsForMonth(m, year);
+    const titularCredit = credits.filter(c => c.person === getTitular()).reduce((s, c) => s + c.parcelValue, 0);
+    const totalCartao = credits.reduce((s, c) => s + c.parcelValue, 0);
+
+    const expTotal = billsTotal + titularCredit;
+    expenseData.push(expTotal);
+    cartaoData.push(totalCartao);
+
+    const bal = incTotal - expTotal;
+    balanceData.push(bal);
+    cumulative += bal;
+    cumulativeData.push(cumulative);
+
+    // Categories
+    bills.forEach(b => {
+      categoryTotals[b.category] = (categoryTotals[b.category] || 0) + b.monthlyValue;
+    });
+    credits.filter(c => c.person === getTitular()).forEach(c => {
+      categoryTotals['Cartão (Titular)'] = (categoryTotals['Cartão (Titular)'] || 0) + c.parcelValue;
+    });
+
+    // Persons
+    credits.forEach(c => {
+      personTotals[c.person] = (personTotals[c.person] || 0) + c.parcelValue;
+    });
+  }
+
+  // Year totals
+  const yearIncome = incomeData.reduce((s, v) => s + v, 0);
+  const yearExpense = expenseData.reduce((s, v) => s + v, 0);
+  const yearBalance = yearIncome - yearExpense;
+  const yearCartao = cartaoData.reduce((s, v) => s + v, 0);
+
+  document.getElementById('dashCards').innerHTML = `
+    <div class="card income">
+      <div class="card-label">Ganhos do Ano</div>
+      <div class="card-value" style="font-size:1.4rem">${fmtMoney(yearIncome)}</div>
+    </div>
+    <div class="card expense">
+      <div class="card-label">Despesas do Ano</div>
+      <div class="card-value" style="font-size:1.4rem">${fmtMoney(yearExpense)}</div>
+    </div>
+    <div class="card balance">
+      <div class="card-label">Saldo do Ano</div>
+      <div class="card-value ${yearBalance >= 0 ? 'positive' : 'negative'}" style="font-size:1.4rem">${fmtMoney(yearBalance)}</div>
+    </div>
+    <div class="card" style="border-left:4px solid var(--warning)">
+      <div class="card-label">Fatura Cartão (Ano)</div>
+      <div class="card-value" style="font-size:1.4rem;color:var(--warning)">${fmtMoney(yearCartao)}</div>
+    </div>
+  `;
+
+  // Chart colors — adapt to current theme (light/dark)
+  const isLight = document.body.classList.contains('light-mode');
+  const textStyle = isLight ? '#64748b' : '#94a3b8';
+  const gridColor = isLight ? 'rgba(100,116,139,0.2)' : 'rgba(51,65,85,0.4)';
+  const incomeColor = '#10b981';
+  const expenseColor = '#ef4444';
+  const primaryColor = '#818cf8';
+  const warningColor = '#f59e0b';
+
+  // Chart 1: Ganhos vs Despesas (bar)
+  dashCharts.ganhosDespesas = new Chart(document.getElementById('chartGanhosDespesas'), {
+    type: 'bar',
+    data: {
+      labels: monthLabels,
+      datasets: [
+        { label: 'Ganhos', data: incomeData, backgroundColor: incomeColor, borderRadius: 4 },
+        { label: 'Despesas', data: expenseData, backgroundColor: expenseColor, borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: textStyle } } },
+      scales: {
+        x: { ticks: { color: textStyle }, grid: { display: false } },
+        y: { ticks: { color: textStyle, callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }, grid: { color: gridColor } }
+      }
+    }
+  });
+
+  // Chart 2: Saldo Mensal (bar, green/red)
+  const saldoColors = balanceData.map(v => v >= 0 ? incomeColor : expenseColor);
+  dashCharts.saldo = new Chart(document.getElementById('chartSaldo'), {
+    type: 'bar',
+    data: {
+      labels: monthLabels,
+      datasets: [{ label: 'Saldo', data: balanceData, backgroundColor: saldoColors, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: textStyle }, grid: { display: false } },
+        y: { ticks: { color: textStyle, callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }, grid: { color: gridColor } }
+      }
+    }
+  });
+
+  // Chart 3: Despesas por Categoria (doughnut)
+  const catLabels = Object.keys(categoryTotals);
+  const catData = catLabels.map(k => categoryTotals[k]);
+  const catColors = ['#6366f1','#10b981','#ef4444','#f59e0b','#3b82f6','#ec4899','#8b5cf6','#14b8a6','#f97316','#06b6d4'];
+  dashCharts.categoria = new Chart(document.getElementById('chartCategoria'), {
+    type: 'doughnut',
+    data: {
+      labels: catLabels,
+      datasets: [{ data: catData, backgroundColor: catColors.slice(0, catLabels.length), borderWidth: 0 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { color: textStyle, font: { size: 11 }, boxWidth: 12 } } }
+    }
+  });
+
+  // Chart 4: Cartão por Pessoa (bar horizontal)
+  const personLabels = Object.keys(personTotals);
+  const personData = personLabels.map(k => personTotals[k]);
+  dashCharts.pessoa = new Chart(document.getElementById('chartPessoa'), {
+    type: 'bar',
+    data: {
+      labels: personLabels,
+      datasets: [{ label: 'Gastos no Cartão', data: personData, backgroundColor: primaryColor, borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: textStyle, callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }, grid: { color: gridColor } },
+        y: { ticks: { color: textStyle }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Chart 5: Saldo Acumulado (line)
+  dashCharts.acumulado = new Chart(document.getElementById('chartAcumulado'), {
+    type: 'line',
+    data: {
+      labels: monthLabels,
+      datasets: [{
+        label: 'Saldo Acumulado',
+        data: cumulativeData,
+        borderColor: primaryColor,
+        backgroundColor: 'rgba(129,140,248,0.15)',
+        fill: true,
+        tension: 0.3,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: primaryColor
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: textStyle }, grid: { display: false } },
+        y: { ticks: { color: textStyle, callback: v => 'R$ ' + (v/1000).toFixed(0) + 'k' }, grid: { color: gridColor } }
+      }
+    }
+  });
+
+  // Month-by-month breakdown table
+  let breakdownHTML = '';
+  for (let m = 0; m < 12; m++) {
+    const isCurrent = m === currentMonth;
+    breakdownHTML += `
+      <tr class="${isCurrent ? 'current-row' : ''}">
+        <td data-label="Mês" style="font-weight:${isCurrent ? '600' : '400'}">${MONTHS[m]}</td>
+        <td data-label="Ganhos" style="color:var(--success)">${fmtMoney(incomeData[m])}</td>
+        <td data-label="Despesas" style="color:var(--danger)">${fmtMoney(expenseData[m])}</td>
+        <td data-label="Saldo" class="${balanceData[m] >= 0 ? 'bal-pos' : 'bal-neg'}">${fmtMoney(balanceData[m])}</td>
+        <td data-label="Cartão">${fmtMoney(cartaoData[m])}</td>
+      </tr>
+    `;
+  }
+  // Total row
+  breakdownHTML += `
+    <tr style="border-top:2px solid var(--border)">
+      <td data-label="Mês" style="font-weight:700">TOTAL</td>
+      <td data-label="Ganhos" style="font-weight:700;color:var(--success)">${fmtMoney(yearIncome)}</td>
+      <td data-label="Despesas" style="font-weight:700;color:var(--danger)">${fmtMoney(yearExpense)}</td>
+      <td data-label="Saldo" class="${yearBalance >= 0 ? 'bal-pos' : 'bal-neg'}" style="font-weight:700">${fmtMoney(yearBalance)}</td>
+      <td data-label="Cartão" style="font-weight:700">${fmtMoney(yearCartao)}</td>
+    </tr>
+  `;
+  document.getElementById('dashBreakdown').innerHTML = breakdownHTML;
+}
+
+
+
+// ===== LOCAL PROFILE (dados salvos no dispositivo) =====
+const PROFILE_KEY = 'app_user_profile';
+let isOnlineMode = false; // app 100% offline
+
+// 💬 getProfile() → Lê do aparelho quem é você (nome e foto) pra mostrar no cantinho.
+function getProfile() {
+  try { return JSON.parse(localStorage.getItem(PROFILE_KEY)); } catch (e) { return null; }
+}
+
+// 💬 saveProfile() → Guarda seu nome e sua foto no aparelho.
+function saveProfile(p) { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); }
+
+// 💬 initProfile() → No início do app, confere se você já se apresentou uma vez.
+function initProfile() {
+  const p = getProfile();
+  if (p && p.name) {
+    updateAuthUI();
+    // usuário que nunca viu o tutorial (primeira vez ou atualizou de versão antiga)
+    if (!localStorage.getItem(TUTORIAL_KEY)) showTutorial();
+  } else {
+    showWelcomeModal(true);
+  }
+}
+
+// 💬 showWelcomeModal() → Abre a janelinha de boas-vindas pra você colocar seu nome (e foto, se quiser).
+function showWelcomeModal(isFirstTime) {
+  document.getElementById('welcomeTitle').textContent = isFirstTime ? 'Bem-vindo! 👋' : 'Editar Perfil';
+  document.getElementById('welcomeSubtitle').textContent = isFirstTime
+    ? 'Seu controle financeiro, salvo direto no seu aparelho.'
+    : 'Atualize seu nome abaixo.';
+  const btn = document.getElementById('welcomeSubmitBtn');
+  btn.textContent = isFirstTime ? 'Começar' : 'Salvar';
+  const p = getProfile();
+  if (p && p.name) document.getElementById('welcomeName').value = p.name;
+  window.__photoData = null;
+  document.getElementById('welcomeError').style.display = 'none';
+  updateWelcomeAvatarPreview();
+  document.getElementById('welcomeOverlay').classList.add('active');
+  document.getElementById('appContent').classList.add('app-blurred');
+  setTimeout(() => document.getElementById('welcomeName').focus(), 120);
+}
+
+// 💬 hideWelcomeModal() → Fecha a janelinha de boas-vindas.
+function hideWelcomeModal() {
+  document.getElementById('welcomeOverlay').classList.remove('active');
+  document.getElementById('appContent').classList.remove('app-blurred');
+}
+
+// 💬 submitWelcome() → Confere o nome que você digitou e guarda o perfil (na versão antiga, pedia login do Google).
+function submitWelcome() {
+  const name = document.getElementById('welcomeName').value.trim();
+  const err = document.getElementById('welcomeError');
+  if (!name) {
+    err.textContent = 'Digite seu nome para continuar.';
+    err.style.display = 'block';
+    return;
+  }
+  err.style.display = 'none';
+  const existing = getProfile();
+  const photo = window.__photoData || (existing && existing.photo) || null;
+  const profile = { name: name, joinedAt: (existing && existing.joinedAt) || new Date().toISOString() };
+  if (photo) profile.photo = photo;
+  saveProfile(profile);
+  window.__photoData = null;
+  hideWelcomeModal();
+  updateAuthUI();
+  if (!localStorage.getItem(TUTORIAL_KEY)) showTutorial();
+}
+
+// 💬 updateAuthUI() → Arruma o cantinho do topo: mostra seu nome e foto se você já se apresentou.
+function updateAuthUI() {
+  const container = document.getElementById('authSection');
+  if (!container) return;
+  const p = getProfile();
+  if (p && p.name) {
+    const firstName = p.name.split(' ')[0];
+    const initial = firstName.charAt(0).toUpperCase();
+    const safeName = firstName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const avatarHtml = p.photo
+      ? `<span class="profile-avatar has-photo"><img src="${p.photo}" alt="Foto de perfil"></span>`
+      : `<span class="profile-avatar">${initial}</span>`;
+    container.innerHTML = `
+      <button class="profile-chip" onclick="showWelcomeModal(false)" title="Editar perfil">
+        ${avatarHtml}
+        <span class="profile-name">${safeName}</span>
+      </button>`;
+  } else {
+    container.innerHTML = '';
+  }
+}
+
+// ===== MODO DESKTOP (visualização ampla, salvo no dispositivo) =====
+// 💬 applyLayout() → Função antiga do botão 'Desktop': esticava a tela pra ficar igual num computador.
+function applyLayout(mode) {
+  document.body.classList.toggle('desktop-mode', mode === 'desktop');
+  const btn = document.getElementById('layoutToggleBtn');
+  if (btn) btn.textContent = mode === 'desktop' ? '📱 Celular' : '🖥️ Desktop';
+  const meta = document.querySelector('meta[name="viewport"]');
+  if (meta) meta.setAttribute('content', mode === 'desktop' ? 'width=1280' : 'width=device-width, initial-scale=1.0');
+  try { localStorage.setItem('layout_pref_guest', mode); } catch (e) {}
+}
+
+// 💬 toggleDesktopMode() → Ligava e desligava esse modo desktop (só na versão de celular/Android).
+function toggleDesktopMode() {
+  applyLayout(document.body.classList.contains('desktop-mode') ? 'mobile' : 'desktop');
+}
+
+// ===== FOTO DE PERFIL =====
+// 💬 updateWelcomeAvatarPreview() → Vai desenhando sua foto de perfil na janelinha enquanto você escolhe.
+function updateWelcomeAvatarPreview() {
+  const av = document.getElementById('welcomeAvatar');
+  const name = document.getElementById('welcomeName').value.trim();
+  const profile = getProfile() || {};
+  const photo = window.__photoData || profile.photo || null;
+  if (av) {
+    if (photo) av.innerHTML = '<img src="' + photo + '" alt="Sua foto">';
+    else av.textContent = name ? name.charAt(0).toUpperCase() : '👤';
+  }
+  const rotateBtns = document.getElementById('photoRotateBtns');
+  if (rotateBtns) rotateBtns.style.display = photo ? 'flex' : 'none';
+}
+
+// 💬 pickProfilePhoto() → Abre a câmera ou a galeria pra você escolher sua foto de perfil.
+function pickProfilePhoto(source) {
+  if (window.AndroidImport) {
+    if (source === 'camera' && typeof window.AndroidImport.takePhoto === 'function') {
+      AndroidImport.takePhoto();
+      return;
+    }
+    if (source !== 'camera' && typeof window.AndroidImport.pickImage === 'function') {
+      AndroidImport.pickImage();
+      return;
+    }
+  }
+  const input = document.getElementById(source === 'camera' ? 'photoCameraInput' : 'photoFileInput');
+  input.click();
+}
+
+// 💬 rotateProfilePhoto() → Gira a foto pra 1, 2 ou 3 lados (quando ela sai de cabeça pra baixo).
+function rotateProfilePhoto(deg) {
+  const current = window.__photoData || (getProfile() && getProfile().photo);
+  if (!current) return;
+  const img = new Image();
+  img.onload = () => {
+    const size = img.width || 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.translate(size / 2, size / 2);
+    ctx.rotate(deg * Math.PI / 180);
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    window.__photoData = canvas.toDataURL('image/jpeg', 0.85);
+    updateWelcomeAvatarPreview();
+  };
+  img.src = current;
+}
+
+// Ponte nativa: foto escolhida no Android volta por aqui (dataURL)
+window.__nativePhotoPick = function(dataUrl) {
+  if (!dataUrl) return;
+  resizePhotoToSquare(dataUrl, 256, d => {
+    window.__photoData = d;
+    updateWelcomeAvatarPreview();
+  });
+};
+
+// 💬 onPhotoFilePicked() → Recebe a foto que você escolheu e prepara pra usar no app.
+function onPhotoFilePicked(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const finish = () => { event.target.value = ''; };
+  // createImageBitmap com imageOrientation:'from-image' já aplica a rotação EXIF
+  // corretamente (o problema clássico de foto "de lado" ao desenhar em <canvas>).
+  if (window.createImageBitmap) {
+    createImageBitmap(file, { imageOrientation: 'from-image' }).then(bitmap => {
+      const size = Math.min(bitmap.width, bitmap.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = 256; canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(bitmap, (bitmap.width - size) / 2, (bitmap.height - size) / 2, size, size, 0, 0, 256, 256);
+      window.__photoData = canvas.toDataURL('image/jpeg', 0.85);
+      updateWelcomeAvatarPreview();
+      finish();
+    }).catch(() => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        resizePhotoToSquare(e.target.result, 256, d => { window.__photoData = d; updateWelcomeAvatarPreview(); });
+        finish();
+      };
+      reader.readAsDataURL(file);
+    });
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    resizePhotoToSquare(e.target.result, 256, d => {
+      window.__photoData = d;
+      updateWelcomeAvatarPreview();
+    });
+    finish();
+  };
+  reader.readAsDataURL(file);
+}
+
+// 💬 resizePhotoToSquare() → Deixa a foto quadradinha e do tamanho certo, pra caber bonito no cantinho.
+function resizePhotoToSquare(dataUrl, size, cb) {
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const s = Math.min(img.width, img.height);
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, size, size);
+      cb(canvas.toDataURL('image/jpeg', 0.85));
+    } catch (e) { console.warn('Erro ao redimensionar foto', e); }
+  };
+  img.src = dataUrl;
+}
+
+// 💬 removeProfilePhoto() → Apaga sua foto de perfil e volta o bonequinho padrão.
+function removeProfilePhoto() {
+  window.__photoData = null;
+  const p = getProfile();
+  if (p && p.photo) { delete p.photo; saveProfile(p); updateAuthUI(); }
+  updateWelcomeAvatarPreview();
+}
+
+// ===== TUTORIAL DE PRIMEIRO ACESSO =====
+const TUTORIAL_KEY = 'tutorial_done_v1';
+const TUTORIAL_STEPS = [
+  { emoji: '👋', title: 'Bem-vindo!', text: 'Um tour rápido de 30 segundos no seu Controle Financeiro. Pode pular se preferir.' },
+  { emoji: '📅', title: 'Navegue pelos meses', text: 'Use "◀ Voltar" e "Avançar ▶" no topo para ver cada mês. O botão "📅 Mês da Fatura" pula direto pro mês das compras do cartão.' },
+  { emoji: '📊', title: 'Tudo em um só lugar', text: 'As abas no topo separam Ganhos, Contas, Cartões e Panorama. Os cards acima mostram o resumo do mês: ganhos, despesas e o que resta na conta.' },
+  { emoji: '💳', title: 'Cartões de crédito', text: 'Crie quantos cartões quiser (Nubank, Santander...). Cada um tem suas compras, fatura e PDF próprios — e o Panorama soma tudo automaticamente.' },
+  { emoji: '🔒', title: 'Seus dados são seus', text: 'Tudo fica salvo apenas no seu aparelho. Faça backup em "📦 Dados" e alterne ☀️ dia/🌙 noite quando quiser.' }
+];
+let tutorialStep = 0;
+
+// 💬 showTutorial() → Na primeira vez que você abre o app, mostra um passinho a passo de como usar.
+function showTutorial(force) {
+  if (!force && localStorage.getItem(TUTORIAL_KEY)) return;
+  tutorialStep = 0;
+  renderTutorialStep();
+  document.getElementById('tutorialOverlay').classList.add('active');
+  document.getElementById('appContent').classList.add('app-blurred');
+}
+
+// 💬 renderTutorialStep() → Desenha cada telinha do tutorial (o texto e os botõezinhos de andar).
+function renderTutorialStep() {
+  const s = TUTORIAL_STEPS[tutorialStep];
+  document.getElementById('tutorialEmoji').textContent = s.emoji;
+  document.getElementById('tutorialTitle').textContent = s.title;
+  document.getElementById('tutorialText').textContent = s.text;
+  document.getElementById('tutorialNextBtn').textContent = tutorialStep === TUTORIAL_STEPS.length - 1 ? 'Começar a usar 🚀' : 'Próximo';
+  document.getElementById('tutorialDots').innerHTML = TUTORIAL_STEPS.map((_, i) =>
+    `<div class="tutorial-dot${i === tutorialStep ? ' active' : ''}"></div>`
+  ).join('');
+}
+
+// 💬 tutorialNext() → Vai pro próximo passo do tutorial.
+function tutorialNext() {
+  tutorialStep++;
+  if (tutorialStep >= TUTORIAL_STEPS.length) { finishTutorial(false); return; }
+  renderTutorialStep();
+}
+
+// 💬 finishTutorial() → Termina o tutorial (ou pula ele) e marca que você já viu, pra não mostrar de novo.
+function finishTutorial(skipped) {
+  localStorage.setItem(TUTORIAL_KEY, '1');
+  document.getElementById('tutorialOverlay').classList.remove('active');
+  document.getElementById('appContent').classList.remove('app-blurred');
+}
+
+// ===== CAPTURA DE COMPRAS VIA NOTIFICAÇÕES =====
+let pendingPurchaseQueue = [];
+
+// 💬 checkNativePurchases() → (Só no Android) Confere se chegaram notificações de compras dos bancos.
+function checkNativePurchases() {
+  if (!window.AndroidImport || typeof window.AndroidImport.getPendingPurchases !== 'function') return;
+  try {
+    const raw = window.AndroidImport.getPendingPurchases();
+    const list = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(list) && list.length > 0) {
+      pendingPurchaseQueue = list;
+      showNextPurchasePrompt();
+    }
+  } catch (e) { console.warn('Erro ao ler notificações capturadas', e); }
+}
+window.checkNativePurchases = checkNativePurchases;
+
+// 💬 showNextPurchasePrompt() → Mostra a janelinha 'Compra detectada!' com o valor e a loja, pra você confirmar com um toque.
+function showNextPurchasePrompt() {
+  const item = pendingPurchaseQueue[0];
+  if (!item) { closeModal('notifPromptModal'); return; }
+  ensureCards();
+  document.getElementById('notifPromptValue').value = (Number(item.value) || 0).toFixed(2);
+  document.getElementById('notifPromptMerchant').value = item.merchant || 'Compra';
+  document.getElementById('notifPromptSource').textContent = item.app
+    ? 'Detectada na notificação de: ' + String(item.app).replace(/^com\./, '').replace(/^br\.com\./, '').replace(/\./g, ' ')
+    : 'Detectada numa notificação do seu celular';
+  const sel = document.getElementById('notifPromptCard');
+  sel.innerHTML = db.cards.map(c => `<option value="${c.id}">${escapeHtmlCard(c.name)}</option>`).join('');
+
+  document.getElementById('notifPromptInstallments').value = '1';
+  document.getElementById('notifPromptDueDate').value = defaultNextMonthDueDate();
+
+  const personSel = document.getElementById('notifPromptPerson');
+  personSel.innerHTML = db.people.map(p =>
+    `<option value="${p}">${p}${p === getTitular() ? ' (Titular)' : ''}</option>`
+  ).join('');
+  personSel.value = getTitular();
+
+  openModal('notifPromptModal');
+}
+
+/** Dia 10 do mês seguinte ao mês REAL atual (ago -> 10/set, jan -> 10/fev, dez -> 10/jan do ano seguinte). */
+// 💬 defaultNextMonthDueDate() → Calcula o dia de vencimento que costuma vir na fatura do próximo mês.
+function defaultNextMonthDueDate() {
+  const now = new Date();
+  let nextMonth = now.getMonth() + 1; // 0-indexed -> já é "mês seguinte" em base 1
+  let nextYear = now.getFullYear();
+  if (nextMonth > 11) { nextMonth = 0; nextYear++; }
+  const mm = String(nextMonth + 1).padStart(2, '0');
+  return `${nextYear}-${mm}-10`;
+}
+
+// 💬 acceptPendingPurchase() → Você tocou em 'Sim': a compra da notificação entra na fatura do cartão escolhido.
+function acceptPendingPurchase() {
+  const item = pendingPurchaseQueue.shift();
+  if (!item) { closeModal('notifPromptModal'); return; }
+  const editedValue = parseFloat(document.getElementById('notifPromptValue').value);
+  const editedMerchant = document.getElementById('notifPromptMerchant').value.trim();
+  const cardId = document.getElementById('notifPromptCard').value;
+  const person = document.getElementById('notifPromptPerson').value || getTitular();
+  const installments = parseInt(document.getElementById('notifPromptInstallments').value) || 1;
+  let dateStr = document.getElementById('notifPromptDueDate').value;
+  if (!dateStr) dateStr = defaultNextMonthDueDate();
+  const now = new Date();
+  const addedAtDate = now.toISOString().split('T')[0];
+  const d = new Date(dateStr + 'T00:00:00');
+  db.credits.push({
+    id: genId(),
+    desc: editedMerchant || item.merchant || 'Compra',
+    value: !isNaN(editedValue) && editedValue > 0 ? editedValue : item.value,
+    person,
+    installments,
+    date: dateStr,
+    purchaseMonth: d.getMonth(),
+    purchaseYear: d.getFullYear(),
+    cardId: cardId,
+    createdAt: Date.now(),
+    addedAt: addedAtDate,
+    fromNotification: true
+  });
+  saveDB();
+  renderAll();
+  if (pendingPurchaseQueue.length > 0) showNextPurchasePrompt();
+  else closeModal('notifPromptModal');
+}
+
+// 💬 declinePendingPurchase() → Você tocou em 'Não agora': a notificação fica guardada pra lembrar depois.
+function declinePendingPurchase() {
+  pendingPurchaseQueue.shift();
+  if (pendingPurchaseQueue.length > 0) showNextPurchasePrompt();
+  else closeModal('notifPromptModal');
+}
+
+// 💬 updateNotifStatus() → Olha se a leitura de notificações está ligada e avisa na telinha de 📦 Dados.
+function updateNotifStatus() {
+  const el = document.getElementById('notifStatus');
+  const btn = document.getElementById('notifEnableBtn');
+  if (!el) return;
+  const native = window.AndroidImport && typeof window.AndroidImport.isNotifListenerEnabled === 'function';
+  if (!native) {
+    el.textContent = 'Disponível apenas na versão Android (APK).';
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+  const enabled = String(window.AndroidImport.isNotifListenerEnabled()) === 'true';
+  el.textContent = enabled
+    ? '✅ Ativado! O app vai detectar compras nos apps de banco e perguntar se você quer lançá-las no cartão ao abrir.'
+    : 'Desativado. Toque no botão abaixo, encontre "Controle Financeiro" na lista e permita o acesso a notificações.';
+  if (btn) btn.textContent = enabled ? 'Configurações de acesso' : 'Ativar leitura de notificações';
+}
+
+// 💬 openNotifAccessSettings() → Abre a tela do Android onde você liga a permissão de ler notificações.
+function openNotifAccessSettings() {
+  if (window.AndroidImport && typeof window.AndroidImport.openNotifSettings === 'function') {
+    window.AndroidImport.openNotifSettings();
+  } else {
+    alert('Disponível apenas na versão Android (APK).');
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) setTimeout(checkNativePurchases, 400);
+});
+
+// ===== THEME (claro/escuro, salvo no dispositivo) =====
+// 💬 getThemeKey() → Descobre onde guardar a preferência de tema (dia/noite) no aparelho.
+function getThemeKey() {
+  return 'theme_pref_guest';
+}
+
+// 💬 applyTheme() → Aplica o tema: ☀️ claro de dia ou 🌙 escuro de noite, em tudo.
+function applyTheme(theme) {
+  if (theme === 'light') {
+    document.body.classList.add('light-mode');
+  } else {
+    document.body.classList.remove('light-mode');
+  }
+  const btn = document.getElementById('themeToggleBtn');
+  if (btn) {
+    btn.textContent = theme === 'light' ? '🌙 Noite' : '☀️ Dia';
+    btn.title = theme === 'light' ? 'Mudar para modo noturno' : 'Mudar para modo diurno';
+  }
+  if (typeof renderAll === 'function' && typeof Chart !== 'undefined') {
+    try { renderAll(); } catch (e) { /* charts not ready yet */ }
+  }
+}
+
+// 💬 getCurrentTheme() → Pergunta qual tema está sendo usado agora.
+function getCurrentTheme() {
+  return document.body.classList.contains('light-mode') ? 'light' : 'dark';
+}
+
+// 💬 loadTheme() → Lê do aparelho qual tema você escolheu da última vez.
+function loadTheme() {
+  applyTheme(localStorage.getItem(getThemeKey()) || 'dark');
+}
+
+// 💬 toggleTheme() → Botão ☀️/🌙: troca entre modo claro e modo escuro.
+function toggleTheme() {
+  const newTheme = getCurrentTheme() === 'light' ? 'dark' : 'light';
+  applyTheme(newTheme);
+  localStorage.setItem(getThemeKey(), newTheme);
+}
+
+// ===== STUBS (app 100% local — sem sincronização em nuvem) =====
+// 💬 syncPeopleToSupabase() → (Função aposentada) Antigamente mandava dados pra um servidor. Hoje não faz nada.
+function syncPeopleToSupabase() {}
+// 💬 syncBillToSupabase() → (Função aposentada) Não faz mais nada. Os dados ficam só no seu aparelho.
+function syncBillToSupabase() {}
+// 💬 deleteBillFromSupabase() → (Função aposentada) Não faz mais nada.
+function deleteBillFromSupabase() {}
+// 💬 syncCreditToSupabase() → (Função aposentada) Não faz mais nada.
+function syncCreditToSupabase() {}
+// 💬 deleteCreditFromSupabase() → (Função aposentada) Não faz mais nada.
+function deleteCreditFromSupabase() {}
+// 💬 syncIncomeToSupabase() → (Função aposentada) Não faz mais nada.
+function syncIncomeToSupabase() {}
+// 💬 deleteIncomeFromSupabase() → (Função aposentada) Não faz mais nada.
+function deleteIncomeFromSupabase() {}
+
+// ===== PWA INSTALL =====
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.classList.add('visible');
+});
+
+window.addEventListener('appinstalled', () => {
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.classList.remove('visible');
+  deferredPrompt = null;
+  alert('✅ App instalado com sucesso! Procure pelo ícone na sua tela inicial.');
+});
+
+async function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      deferredPrompt = null;
+      const btn = document.getElementById('installBtn');
+      if (btn) btn.classList.remove('visible');
+    }
+  } else {
+    showInstallInstructions();
+  }
+}
+
+// 💬 showInstallInstructions() → Mostra o passo a passo de como 'instalar' o app na tela inicial, dependendo do aparelho.
+function showInstallInstructions() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  const isAndroid = /Android/.test(ua);
+  const isChrome = /Chrome/.test(ua) && !/Edg/.test(ua);
+  const isEdge = /Edg/.test(ua);
+  const isFirefox = /Firefox/.test(ua);
+  const isDesktop = !isIOS && !isAndroid;
+
+  let html = '';
+
+  if (isIOS) {
+    html = `
+      <span class="platform-badge ios">📱 iPhone / iPad (Safari)</span>
+      <div class="install-instructions">
+        <div class="step"><div class="step-num">1</div><div class="step-text">Toque no botão <strong>Compartilhar</strong> (o ícone de quadrado com seta para cima, na barra inferior)</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Role para baixo e toque em <strong>"Adicionar à Tela de Início"</strong></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text">Toque em <strong>"Adicionar"</strong> — pronto! O ícone vai aparecer na sua tela inicial</div></div>
+      </div>
+    `;
+  } else if (isAndroid && (isChrome || isEdge)) {
+    html = `
+      <span class="platform-badge android">🤖 Android</span>
+      <div class="install-instructions">
+        <div class="step"><div class="step-num">1</div><div class="step-text">Toque no menu <strong>⋮</strong> (três pontinhos) no canto superior direito do navegador</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Toque em <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text">Confirme — o app será instalado e o ícone aparecerá na sua tela inicial</div></div>
+      </div>
+    `;
+  } else if (isDesktop) {
+    html = `
+      <span class="platform-badge desktop">💻 Computador</span>
+      <div class="install-instructions">
+        <div class="step"><div class="step-num">1</div><div class="step-text">Procure o ícone <strong>Instalar</strong> (⊕) na barra de endereço do navegador</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Clique nele e confirme a instalação</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text">O app será aberto como uma janela separada e ficará disponível no seu computador</div></div>
+      </div>
+    `;
+  } else {
+    html = `
+      <div class="install-instructions">
+        <div class="step"><div class="step-num">1</div><div class="step-text">Abra o menu do seu navegador</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Procure a opção <strong>"Adicionar à tela inicial"</strong> ou <strong>"Instalar aplicativo"</strong></div></div>
+      </div>
+    `;
+  }
+
+  html += `<div style="font-size:.82rem;color:var(--text-muted);margin-top:12px;text-align:center">💡 O app funciona offline depois de instalado. Seus dados ficam salvos no aparelho.</div>`;
+  document.getElementById('installInstructions').innerHTML = html;
+  openModal('installModal');
+}
+
+// ===== PWA MANIFEST (inline via blob) =====
+// 💬 setupPWA() → Prepara o app pra ser instalado como se fosse aplicativo de verdade no celular.
+function setupPWA() {
+  const iconSVG = 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">' +
+    '<rect width="512" height="512" rx="100" fill="#6366f1"/>' +
+    '<circle cx="256" cy="240" r="130" fill="none" stroke="white" stroke-width="18"/>' +
+    '<text x="256" y="310" font-family="Arial,sans-serif" font-size="130" font-weight="bold" text-anchor="middle" fill="white">R$</text>' +
+    '</svg>'
+  );
+
+  const manifest = {
+    name: 'Controle Financeiro Pessoal',
+    short_name: 'Finanças',
+    description: 'Controle financeiro pessoal completo',
+    start_url: '.',
+    scope: '.',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#0f172a',
+    theme_color: '#6366f1',
+    icons: [
+      { src: iconSVG, sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+      { src: iconSVG, sizes: '512x512', type: 'image/svg+xml', purpose: 'any' },
+      { src: iconSVG, sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' }
+    ]
+  };
+
+  const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+  const manifestURL = URL.createObjectURL(manifestBlob);
+  let link = document.querySelector('link[rel="manifest"]');
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'manifest';
+    document.head.appendChild(link);
+  }
+  link.href = manifestURL;
+
+  // Add theme-color meta
+  let themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (!themeMeta) {
+    themeMeta = document.createElement('meta');
+    themeMeta.name = 'theme-color';
+    document.head.appendChild(themeMeta);
+  }
+  themeMeta.content = '#6366f1';
+
+  // Register service worker (inline, same-origin to avoid cross-origin errors)
+  if ('serviceWorker' in navigator) {
+    const swCode = 'const CACHE=\'controle-fin-v1\';self.addEventListener(\'install\',e=>{self.skipWaiting()}),self.addEventListener(\'activate\',e=>{e.waitUntil(self.clients.claim())}),self.addEventListener(\'fetch\',e=>{e.request.method!==\'GET\'||e.request.url.includes(\'supabase\')||(e.respondWith(caches.open(CACHE).then(c=>c.match(e.request).then(r=>r||fetch(e.request).then(resp=>{c.put(e.request,resp.clone());return resp}).catch(()=>c.match(\'/\'))))))})';
+    const swBlob = new Blob([swCode], { type: 'application/javascript' });
+    const swURL = URL.createObjectURL(swBlob);
+    navigator.serviceWorker.register(swURL).then(() => {
+      console.log('SW registrado');
+    }).catch(err => {
+      console.warn('SW registration failed:', err);
+    });
+  }
+}
+
+// ===== DATA MANAGEMENT =====
+// 💬 openDataModal() → Abre a janelinha 📦 Dados, com backup, importação e apagar tudo.
+function openDataModal() {
+  updateNotifStatus();
+  openModal('dataModal');
+}
+
+// 💬 exportLocalJSON() → Faz uma cópia de segurança (um arquivo .json com tudo) pra você guardar ou levar pra outro aparelho.
+function exportLocalJSON() {
+  const dataStr = JSON.stringify(db, null, 2);
+  const filename = 'controle-financeiro-' + new Date().toISOString().split('T')[0] + '.json';
+  window.__filename = filename;
+  // Dentro do app Android: salva direto na pasta Downloads via ponte nativa
+  if (window.AndroidDownload && typeof window.AndroidDownload.saveTextFile === 'function') {
+    AndroidDownload.saveTextFile(filename, dataStr);
+    return;
+  }
+  // Navegador: caminho clássico via blob
+  const blob = new Blob([dataStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// 💬 applyImportedJSON() → Recebe o texto de um backup e coloca os dados de volta no app.
+function applyImportedJSON(text) {
+  try {
+    const data = JSON.parse(text);
+    if (!data || typeof data !== 'object' || (!Array.isArray(data.bills) && !Array.isArray(data.credits) && !Array.isArray(data.incomes))) {
+      alert('❌ Arquivo inválido! Selecione um backup JSON gerado pelo app.');
+      return;
+    }
+    if (confirm('Importar dados? Isso vai SUBSTITUIR os dados atuais.')) {
+      db = { ...db, ...data };
+      if (!db.people || !Array.isArray(db.people) || db.people.length === 0) db.people = ['Pessoa 1', 'Pessoa 2', 'Pessoa 3'];
+      ensureCards();
+
+      saveDB();
+      renderAll();
+      renderPeopleManager();
+      alert('✅ Dados importados com sucesso!');
+    }
+  } catch(err) { alert('❌ Arquivo inválido!'); }
+}
+
+// 💬 importLocalJSON() → Lê o arquivo de backup que você escolheu e entrega pro app restaurar.
+function importLocalJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => applyImportedJSON(e.target.result);
+  reader.readAsText(file);
+}
+
+// Ponte nativa do app Android: o arquivo escolhido volta por aqui (dataURL base64)
+window.__nativeImport = function(dataUrl) {
+  try {
+    const b64 = dataUrl.split(',')[1];
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const text = new TextDecoder('utf-8').decode(bytes);
+    applyImportedJSON(text);
+  } catch(err) { alert('❌ Arquivo inválido!'); }
+};
+
+// 💬 triggerImport() → Abre a janelinha pra você escolher o arquivo de backup salvo no aparelho.
+function triggerImport() {
+  if (window.AndroidImport && typeof window.AndroidImport.pickFile === 'function') {
+    AndroidImport.pickFile();
+    return;
+  }
+  document.getElementById('importJSONFile').click();
+}
+
+async function clearAllData() {
+  if (!confirm('⚠️ APAGAR TODOS os dados? Esta ação não pode ser desfeita!')) return;
+  if (!confirm('Tem certeza absoluta? Todos os gastos, contas, cartão e ganhos serão perdidos!')) return;
+
+  // 1. Clear local storage
+  db = { bills: [], credits: [], incomes: [], people: ['Pessoa 1', 'Pessoa 2', 'Pessoa 3'] };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+
+  renderAll();
+  renderPeopleManager();
+  alert('✅ Todos os dados foram apagados.');
+}
+
+// ===== AUTO-SAVE (LocalStorage already handles this, but ensure saveDB wrapper is clean) =====
+
+// ===== RENDER ALL =====
+// 💬 renderAll() → Desenha tudo de novo (todas as telas e somas) — roda sempre que algo muda.
+function renderAll() {
+  renderBills();
+  renderCredits();
+  renderIncomes();
+  renderSummary();
+  updateCurrentBadge();
+  renderDashboard();
+}
+
+
+
+const ACCORDION_KEY = 'accordion_state_guest';
+// 💬 getAccordionState() → Lê a 'memória' de quais janelinhas sanfona estão abertas ou fechadas.
+function getAccordionState() {
+  try { return JSON.parse(localStorage.getItem(ACCORDION_KEY)) || {}; } catch (e) { return {}; }
+}
+// 💬 saveAccordionState() → Escreve nessa memória se você deixou uma sanfona aberta ou fechada.
+function saveAccordionState(key, open) {
+  const st = getAccordionState();
+  st[key] = open;
+  try { localStorage.setItem(ACCORDION_KEY, JSON.stringify(st)); } catch (e) {}
+}
+// 💬 applyAccordionStates() → Depois de redesenhar a tela, reabre as sanfonas como você deixou da última vez.
+function applyAccordionStates(root) {
+  const st = getAccordionState();
+  (root || document).querySelectorAll('details.section-disclosure[data-acc-key]').forEach(d => {
+    const saved = st[d.dataset.accKey];
+    const defaultOpen = d.dataset.accDefault !== 'closed';
+    d.open = saved === undefined ? defaultOpen : !!saved;
+    // o acordeão "Gerenciar pessoas" é independente: não deve acionar o
+    // modo "Editar" (ícones de ação) do cabeçalho de Cartões de Crédito,
+    // já que os dois compartilham a mesma seção pai.
+    if (!d.classList.contains('people-disclosure')) {
+      const section = d.closest('.section');
+      if (section) section.classList.toggle('actions-open', d.open);
+    }
+  });
+}
+// 💬 sectionActionsToggled() → Roda quando você abre/fecha uma sanfona: guarda a escolha e arruma os botõezinhos.
+function sectionActionsToggled(details) {
+  if (!details.classList.contains('people-disclosure')) {
+    const section = details.closest('.section');
+    if (section) section.classList.toggle('actions-open', details.open);
+    const tab = details.closest('.tab-section');
+    if (tab && section && section.parentElement === tab) tab.classList.toggle('actions-open', details.open);
+  }
+  if (details.dataset.accKey) saveAccordionState(details.dataset.accKey, details.open);
+}
+
+// ===== MODO EDIÇÃO POR SEÇÃO (visual apenas: mostra/oculta ícones de editar/excluir) =====
+const EDIT_MODE_KEY = 'edit_mode_visible_guest';
+const EDIT_MODE_TABS = { income: 'tab-income', bills: 'tab-bills', credit: 'tab-credit' };
+// 💬 getEditModeState() → Lê quais seções estão no modo 'editar' (com os íconezinhos à mostra).
+function getEditModeState() {
+  try { return JSON.parse(localStorage.getItem(EDIT_MODE_KEY)) || {}; } catch (e) { return {}; }
+}
+// 💬 applyEditMode() → Liga ou desliga o modo de edição numa seção (mostra/esconde lápis, lixeira etc.).
+function applyEditMode(section, on) {
+  const tabId = EDIT_MODE_TABS[section];
+  const el = tabId ? document.getElementById(tabId) : null;
+  const btn = document.getElementById('editToggle_' + section);
+  const label = document.getElementById('editToggleLabel_' + section);
+  if (el) el.classList.toggle('edit-mode', on);
+  if (btn) btn.classList.toggle('active', on);
+  if (label) label.textContent = on ? 'Concluir' : 'Editar';
+}
+// 💬 toggleEditMode() → Botão ✏️ Editar: alterna entre mostrar e esconder os ícones de ação.
+function toggleEditMode(section) {
+  const state = getEditModeState();
+  state[section] = !state[section];
+  try { localStorage.setItem(EDIT_MODE_KEY, JSON.stringify(state)); } catch (e) {}
+  applyEditMode(section, state[section]);
+}
+// 💬 initEditModeToggles() → No início, confere suas últimas escolhas de modo de edição e aplica elas.
+function initEditModeToggles() {
+  const state = getEditModeState();
+  Object.keys(EDIT_MODE_TABS).forEach(section => applyEditMode(section, !!state[section]));
+}
+
+// ===== INIT =====
+loadDB();
+applyTheme(localStorage.getItem('theme_pref_guest') || 'dark');
+initPeriodSelector();
+initEditModeToggles();
+applyAccordionStates();
+renderAll();
+setupPWA();
+initProfile();
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', (e) => {
+    if (e.target === o) o.classList.remove('active');
+  });
+});
+
+// Enter key to submit welcome form
+document.getElementById('welcomeName').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitWelcome();
+});
+
+// Ao abrir o app, verificar compras detectadas em notificações
+setTimeout(checkNativePurchases, 1200);
+</script>
+
+<!-- ===== MODAL: CREDIT PDF EXPORT ===== -->
+<!-- 💬 Janelinha de filtros antes de gerar o PDF das compras. -->
+<!-- ===== MODAL: CARTÃO (criar/editar) ===== -->
+<div class="modal-overlay" id="cardModal">
+  <div class="modal">
+    <h2 id="cardModalTitle">Novo Cartão de Crédito</h2>
+    <div class="form-group">
+      <label>Nome do cartão</label>
+      <input type="text" id="cardName" placeholder="Ex: Nubank, Itaú, Cartão 2..." maxlength="24">
+    </div>
+    <div class="form-group">
+      <label>Cor do cartão (barra lateral e detalhes)</label>
+      <div class="color-palette" id="cardColorPalette"></div>
+    </div>
+    <div id="cardDeleteZone" style="display:none;margin-top:8px">
+      <button class="btn btn-danger" onclick="deleteCard()" style="width:100%">🗑️ Excluir este cartão</button>
+      <p style="font-size:.75rem;color:var(--text-muted);margin-top:6px;text-align:center">Ao excluir um cartão, as compras dele também são apagadas.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('cardModal')">Cancelar</button>
+      <button class="btn btn-success" onclick="saveCard()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="creditPdfModal">
+  <div class="modal">
+    <h2>📄 Exportar Compras em PDF</h2>
+    <div class="form-group">
+      <label>Cartão</label>
+      <select id="pdfCardFilter">
+        <option value="">Todos os cartões</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Pessoa</label>
+      <select id="pdfPersonFilter">
+        <option value="">Todas as pessoas</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Data Início</label>
+        <input type="date" id="pdfDateFrom" onkeydown="return false" onpaste="return false" onchange="validatePdfDateRange()" style="cursor:pointer">
+      </div>
+      <div class="form-group">
+        <label>Data Fim</label>
+        <input type="date" id="pdfDateTo" onkeydown="return false" onpaste="return false" onchange="validatePdfDateRange()" style="cursor:pointer">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Ordenar por</label>
+      <select id="pdfSortBy">
+        <option value="date">Data de vencimento</option>
+        <option value="addedAt">Data de adição</option>
+        <option value="person">Pessoa</option>
+        <option value="desc">Descrição</option>
+        <option value="value">Valor</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('creditPdfModal')">Cancelar</button>
+      <button class="btn btn-success" onclick="generateCreditPDF()">Gerar PDF</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
